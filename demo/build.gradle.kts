@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.github.harmonicinc_com.client_side_ad_tracking_android"
+    namespace = "com.github.harmonicinc.csabdemo"
     compileSdk = Constants.compileSdkVersion
 
     defaultConfig {
-        applicationId = "com.github.harmonicinc_com.client_side_ad_tracking_android"
+        applicationId = "com.github.harmonicinc.csabdemo"
         minSdk = Constants.minSdkVersion
         targetSdk = Constants.targetSdkVersion
         versionCode = 1
@@ -39,10 +39,20 @@ android {
 }
 
 dependencies {
+    val media3Version = "1.1.1"
 
+    implementation(project(":lib"))
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.10.0")
+    implementation("androidx.leanback:leanback:1.0.0")
+
+    implementation("androidx.media3:media3-exoplayer:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-dash:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
+    implementation("androidx.media3:media3-ui:$media3Version")
+    implementation("androidx.media3:media3-common:$media3Version")
+
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")

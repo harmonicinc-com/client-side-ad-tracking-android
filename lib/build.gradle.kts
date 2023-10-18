@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.harmonicinc.vosplayer.addon.csab"
+    namespace = "com.gtihub.harmonicinc.clientsideadtracking"
     compileSdk = Constants.compileSdkVersion
 
     defaultConfig {
