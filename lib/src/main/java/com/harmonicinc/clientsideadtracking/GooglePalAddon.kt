@@ -30,6 +30,7 @@ import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_PPID
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_SUPPORTED_API
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
 import com.harmonicinc.clientsideadtracking.player.baseplayer.CorePlayerEventListener
+import com.harmonicinc.clientsideadtracking.tracking.adchoices.AdChoiceManager
 import com.iab.omid.library.harmonicinc.Omid
 import kotlinx.coroutines.tasks.await
 import java.lang.Exception
@@ -56,11 +57,11 @@ class GooglePalAddon(private val androidContext: Context) : PlayerAddon {
             return connection
         }
     })
-    private lateinit var trackingOverlay: TrackingOverlay
+    lateinit var trackingOverlay: TrackingOverlay
+    lateinit var adChoiceManager: AdChoiceManager
 
     private lateinit var nonceLoader: NonceLoader
     private lateinit var nonceManager: NonceManager
-    private lateinit var videoView: ViewGroup
     private lateinit var metadataTracker: AdMetadataTracker
     private lateinit var playerContext: PlayerContext
 
@@ -89,6 +90,7 @@ class GooglePalAddon(private val androidContext: Context) : PlayerAddon {
         omsdkClient = OMSDKClient(playerContext, metadataTracker)
         pmmClient = PMMClient(playerContext, metadataTracker)
         trackingOverlay = TrackingOverlay(playerContext, metadataTracker, omsdkClient, pmmClient)
+        adChoiceManager = AdChoiceManager(playerContext, metadataTracker)
 
         // Subscribe to player events
         subscribeToPlayerEvents()
@@ -148,7 +150,7 @@ class GooglePalAddon(private val androidContext: Context) : PlayerAddon {
 
         val nonceRequest = NonceRequest.builder()
             .descriptionURL(PAL_DESCRIPTION_URL)
-            .iconsSupported(false)
+            .iconsSupported(true)
             .omidVersion(Omid.getVersion())
 //            .omidPartnerVersion(com.harmonicinc.vosplayer.BuildConfig.VERSION_NAME)
 //            .omidPartnerName(BuildConfig.PARTNER_NAME)

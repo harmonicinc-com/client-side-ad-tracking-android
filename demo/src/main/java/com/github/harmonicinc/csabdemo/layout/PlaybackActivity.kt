@@ -11,7 +11,7 @@ import com.harmonicinc.clientsideadtracking.GooglePalAddon
 
 @UnstableApi class PlaybackActivity : AppCompatActivity() {
     private lateinit var playerFragment: PlayerFragment
-    private var googlePalAddon: GooglePalAddon? = null
+    var googlePalAddon: GooglePalAddon? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

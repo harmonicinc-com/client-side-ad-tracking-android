@@ -13,6 +13,7 @@ import com.harmonicinc.clientsideadtracking.tracking.client.OMSDKClient
 import com.harmonicinc.clientsideadtracking.tracking.client.PMMClient
 import com.harmonicinc.clientsideadtracking.tracking.model.Ad
 import com.harmonicinc.clientsideadtracking.tracking.model.AdBreak
+import com.harmonicinc.clientsideadtracking.tracking.model.EventLog
 import com.harmonicinc.clientsideadtracking.tracking.model.Tracking
 import com.harmonicinc.clientsideadtracking.tracking.util.DashHelper
 import com.harmonicinc.clientsideadtracking.tracking.util.OverlayHelper
@@ -40,11 +41,17 @@ class TrackingOverlay(
 
     private val updateDelayMs: Long = 500
 
+    var showOverlay = false
+        set(value) {
+            overlayView.visibility = if (value) View.VISIBLE else View.INVISIBLE
+            field = value
+        }
+
     init {
         CoroutineScope(Dispatchers.Main).launch {
             val inflater = playerContext.androidContext!!.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
             overlayView = inflater.inflate(R.layout.tracking_event_view, null)
-            overlayView.visibility = View.VISIBLE
+            overlayView.visibility = if (showOverlay) View.VISIBLE else View.INVISIBLE
             playerContext.overlayViewContainer?.let {
                 OverlayHelper.addViewToContainerView(overlayView, it)
             } ?: run {
@@ -85,7 +92,7 @@ class TrackingOverlay(
             }
         }
 
-        omsdkClient?.setOverlayListener(trackingListener)
+        omsdkClient?.addEventLogListener(trackingListener)
         pmmClient?.setListener(trackingListener)
         tracker.addAdBreakListener(adBreakListener)
     }

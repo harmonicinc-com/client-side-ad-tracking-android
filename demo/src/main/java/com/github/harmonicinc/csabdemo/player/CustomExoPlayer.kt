@@ -1,5 +1,7 @@
 package com.github.harmonicinc.csabdemo.player
 
+import androidx.media3.common.Player
+import androidx.media3.common.Player.STATE_READY
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -11,6 +13,21 @@ import java.util.Date
 @UnstableApi class CustomExoPlayer(
     private var player: ExoPlayer
 ): AbstractPlayer() {
+
+    private val playerEventListener: Player.Listener = object : Player.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (player.playWhenReady && playbackState == STATE_READY) {
+                eventListeners.forEach {
+                    it.onMediaPresentationResumed()
+                }
+            }
+        }
+    }
+
+    init {
+        player.addListener(playerEventListener)
+    }
+
     override fun getCurrentPositionMs(): Long {
         return player.currentPosition
     }

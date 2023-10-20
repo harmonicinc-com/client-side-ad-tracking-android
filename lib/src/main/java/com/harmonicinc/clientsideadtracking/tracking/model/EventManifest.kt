@@ -29,8 +29,8 @@ class EventManifest {
 
     inner class DataRange(var start: Long, var end: Long) {
         fun parse(json: JSONObject) {
-            this.start = json.optLong("start", 0)
-            this.end = json.optLong("end", 0)
+            this.start = json.optLong("start")
+            this.end = json.optLong("end")
         }
     }
 }

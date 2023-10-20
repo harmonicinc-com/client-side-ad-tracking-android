@@ -1,5 +1,6 @@
 package com.harmonicinc.clientsideadtracking.tracking.client
 
+import android.content.Intent
 import android.media.session.PlaybackState
 import android.util.Log
 import com.harmonicinc.clientsideadtracking.player.PlayerContext
@@ -11,8 +12,9 @@ import com.harmonicinc.clientsideadtracking.tracking.model.Ad
 import com.harmonicinc.clientsideadtracking.tracking.model.AdBreak
 import com.harmonicinc.clientsideadtracking.tracking.model.AdVerification
 import com.harmonicinc.clientsideadtracking.tracking.model.Tracking
-import com.harmonicinc.clientsideadtracking.tracking.overlay.EventLog
+import com.harmonicinc.clientsideadtracking.tracking.model.EventLog
 import com.harmonicinc.clientsideadtracking.player.baseplayer.CorePlayerEventListener
+import com.harmonicinc.clientsideadtracking.tracking.util.Constants.OMSDK_INTENT_LOG_ACTION
 import com.iab.omid.library.harmonicinc.Omid
 import com.iab.omid.library.harmonicinc.adsession.AdEvents
 import com.iab.omid.library.harmonicinc.adsession.AdSession
@@ -22,6 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.net.MalformedURLException
+import java.util.concurrent.CopyOnWriteArrayList
 
 class OMSDKClient(
     private val playerContext: PlayerContext,
@@ -32,7 +35,7 @@ class OMSDKClient(
     private var adEvents: AdEvents? = null
     private var adVerifications: List<AdVerification>? = null
     private var playbackState = PlaybackState.STATE_BUFFERING
-    private var eventLogListener: EventLogListener? = null
+    private var eventLogListeners: CopyOnWriteArrayList<EventLogListener> = CopyOnWriteArrayList()
     private var currentAdBreak: AdBreak? = null
     private var currentAd: Ad? = null
 
@@ -46,8 +49,8 @@ class OMSDKClient(
         initHandlers()
     }
 
-    fun setOverlayListener(listener: EventLogListener) {
-        eventLogListener = listener
+    fun addEventLogListener(listener: EventLogListener) {
+        eventLogListeners.addIfAbsent(listener)
     }
 
     private fun impressionOccurred() {
@@ -153,15 +156,18 @@ class OMSDKClient(
         val adBreakId = currentAdBreak!!.id
         val adId = currentAd!!.id
         CoroutineScope(Dispatchers.Main).launch {
-            eventLogListener?.onEvent(
-                EventLog(
-                    "OMSDK",
-                    adBreakId,
-                    adId,
-                    System.currentTimeMillis(),
-                    event
-                )
+            val eventLog = EventLog(
+                "OMSDK",
+                adBreakId,
+                adId,
+                System.currentTimeMillis(),
+                event
             )
+            eventLogListeners.forEach { it.onEvent(eventLog)}
+            // Fire intent as well
+            val intent = Intent(OMSDK_INTENT_LOG_ACTION)
+            intent.putExtra("message", "[${eventLog.clientTag}] ${eventLog.adBreakId} > ${eventLog.adId} > ${eventLog.event.name}")
+            playerContext.androidContext!!.sendBroadcast(intent)
         }
     }
 

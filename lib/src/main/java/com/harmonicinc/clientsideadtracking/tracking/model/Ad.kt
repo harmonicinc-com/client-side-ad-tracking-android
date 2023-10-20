@@ -1,5 +1,6 @@
 package com.harmonicinc.clientsideadtracking.tracking.model
 
+import com.harmonicinc.clientsideadtracking.tracking.model.icon.Icon
 import org.json.JSONObject
 
 class Ad(ad: JSONObject) {
@@ -8,6 +9,7 @@ class Ad(ad: JSONObject) {
     val tracking: List<Tracking>
     val adVerifications: List<AdVerification>
     val startTime: Long
+    val icons: List<Icon>
     init {
         id = ad.optString("id")
         duration = ad.optDouble("duration")
@@ -26,6 +28,14 @@ class Ad(ad: JSONObject) {
         if (adVerificationList != null) {
             for (i in 0 until adVerificationList.length()) {
                 adVerifications.add(AdVerification(adVerificationList.optJSONObject(i)))
+            }
+        }
+
+        icons = ArrayList()
+        val iconList = ad.optJSONArray("icons")
+        if (iconList != null) {
+            for (i in 0 until iconList.length()) {
+                icons.add(Icon(iconList.optJSONObject(i)))
             }
         }
 

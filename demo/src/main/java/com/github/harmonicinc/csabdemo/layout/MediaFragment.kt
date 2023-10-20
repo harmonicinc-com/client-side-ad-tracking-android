@@ -8,6 +8,7 @@ import android.widget.Button
 import androidx.fragment.app.Fragment
 import androidx.media3.common.util.UnstableApi
 import com.github.harmonicinc.csabdemo.R
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +29,11 @@ import kotlinx.coroutines.launch
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         playbackActivity = activity as PlaybackActivity
+
+        val trackingOverlaySwitch = view.findViewById<MaterialSwitch>(R.id.tracking_overlay_switch)
+        trackingOverlaySwitch.setOnClickListener {
+            playbackActivity.googlePalAddon?.trackingOverlay?.showOverlay = trackingOverlaySwitch.isChecked
+        }
 
         val loadBtn = view.findViewById<Button>(R.id.load_button)
         val stopBtn = view.findViewById<Button>(R.id.stop_button)
