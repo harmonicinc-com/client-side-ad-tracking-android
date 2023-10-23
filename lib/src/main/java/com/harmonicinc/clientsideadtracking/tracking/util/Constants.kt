@@ -10,4 +10,5 @@ object Constants {
     const val SESSION_ID_QUERY_PARAM_KEY = "sessid"
     const val PMM_METADATA_START_QUERY_PARAM_KEY = "start"
     const val OMSDK_INTENT_LOG_ACTION = "harmonicinc.omsdk.log"
+    const val PAL_INTENT_LOG_ACTION = "harmonicinc.pal.log"
 }

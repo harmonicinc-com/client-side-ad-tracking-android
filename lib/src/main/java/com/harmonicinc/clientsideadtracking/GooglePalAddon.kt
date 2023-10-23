@@ -1,6 +1,7 @@
 package com.harmonicinc.clientsideadtracking
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Resources
 import android.media.session.PlaybackState
 import android.net.Uri
@@ -10,6 +11,7 @@ import android.view.View.OnTouchListener
 import android.view.ViewGroup
 import com.android.volley.Request
 import com.android.volley.ServerError
+import com.android.volley.toolbox.BaseHttpStack
 import com.android.volley.toolbox.HurlStack
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
@@ -31,6 +33,7 @@ import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_SUPPORTE
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
 import com.harmonicinc.clientsideadtracking.player.baseplayer.CorePlayerEventListener
 import com.harmonicinc.clientsideadtracking.tracking.adchoices.AdChoiceManager
+import com.harmonicinc.clientsideadtracking.tracking.util.Constants
 import com.iab.omid.library.harmonicinc.Omid
 import kotlinx.coroutines.tasks.await
 import java.lang.Exception
@@ -40,7 +43,11 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-class GooglePalAddon(private val androidContext: Context) : PlayerAddon {
+class GooglePalAddon(
+    androidContext: Context,
+    httpStack: BaseHttpStack,
+    private val nonceLoader: NonceLoader
+) : PlayerAddon {
     private var TAG = "GooglePALAddon"
     private var sessionId: String? = null
     private var ssaiSupported = false
@@ -50,25 +57,30 @@ class GooglePalAddon(private val androidContext: Context) : PlayerAddon {
     private var pmmClient: PMMClient? = null
 
     private val urlFilenameRegex = Regex("[^/\\\\&\\?]+\\.\\w{3,4}(?=([\\?&].*\$|\$))")
-    private val queue = Volley.newRequestQueue(androidContext, object: HurlStack() {
-        override fun createConnection(url: URL?): HttpURLConnection {
-            val connection = super.createConnection(url)
-            connection.instanceFollowRedirects = false
-            return connection
-        }
-    })
+    private val queue = Volley.newRequestQueue(androidContext, httpStack)
     lateinit var trackingOverlay: TrackingOverlay
     lateinit var adChoiceManager: AdChoiceManager
-
-    private lateinit var nonceLoader: NonceLoader
     private lateinit var nonceManager: NonceManager
     private lateinit var metadataTracker: AdMetadataTracker
     private lateinit var playerContext: PlayerContext
 
-    suspend fun prepareBeforeLoad(manifestUrl: String) {
-        // Init Google PAL
-        initializePAL()
+    constructor(androidContext: Context) : this(
+        androidContext,
+        object : HurlStack() {
+            override fun createConnection(url: URL?): HttpURLConnection {
+                val connection = super.createConnection(url)
+                connection.instanceFollowRedirects = false
+                return connection
+            }
+        },
+        NonceLoader(
+            androidContext, ConsentSettings.builder()
+                .allowStorage(true)
+                .build()
+        )
+    )
 
+    suspend fun prepareBeforeLoad(manifestUrl: String) {
         this.manifestUrl = manifestUrl
         sessionId = getSessionId(manifestUrl)
         if (sessionId == null) {
@@ -121,25 +133,6 @@ class GooglePalAddon(private val androidContext: Context) : PlayerAddon {
         return ssaiSupported
     }
 
-    private fun initializePAL() {
-        Log.i(TAG, "Starting Google PAL addon")
-//        View can only have one listener at a time
-//        videoView.setOnTouchListener(this.onVideoViewTouch)
-//        videoView.setOnClickListener(this.onVideoAdClick)
-
-        val consentSettings = ConsentSettings.builder()
-            .allowStorage(true)
-            .build()
-
-        // It is important to instantiate the NonceLoader as early as possible to
-        // allow it to initialize and preload data for a faster experience when
-        // loading the NonceManager. A new NonceLoader will need to be instantiated
-        //if the ConsentSettings change for the user.
-
-        nonceLoader = NonceLoader(androidContext, consentSettings)
-        Log.i(TAG, "Started Google PAL addon")
-    }
-
     private suspend fun generateNonceForAdRequest() {
         Log.d(TAG, "Generating nonce for ad request")
         // NOTE: Assume this addon is used in Android TV only, where player is always fullscreen
@@ -173,30 +166,43 @@ class GooglePalAddon(private val androidContext: Context) : PlayerAddon {
     private fun sendPlaybackStart() {
         Log.d(TAG, "Sending playback start event")
         nonceManager.sendPlaybackStart()
+        pushEventLog("sendPlaybackStart")
     }
 
     private fun sendPlaybackEnd() {
         Log.d(TAG, "Sending playback end event")
         nonceManager.sendPlaybackEnd()
+        pushEventLog("sendPlaybackEnd")
     }
 
-    // Has no effect on Android TV
+    // No effect on Android TV?
+    // Called each time the viewer clicks an ad
     private val onVideoAdClick = OnClickListener {
         // Trigger on click only if ad is playing
         if (metadataTracker.isPlayingAd()) {
             Log.d(TAG, "Sending ad click event")
             nonceManager.sendAdClick()
+            pushEventLog("sendAdClick")
         }
     }
 
-    // Has no effect on Android TV
-    private val onVideoViewTouch = OnTouchListener { view, event ->
+    // No effect on Android TV?
+    // Called on every touch interaction with the player
+    private val onVideoAdViewTouch = OnTouchListener { view, event ->
         view?.performClick()
         if (metadataTracker.isPlayingAd()) {
             Log.d(TAG, "Sending on touch event")
             nonceManager.sendAdTouch(event)
+            pushEventLog("sendAdTouch")
         }
         false
+    }
+
+    private fun pushEventLog(event: String) {
+        // Fire intent
+        val intent = Intent(Constants.PAL_INTENT_LOG_ACTION)
+        intent.putExtra("message", "[PAL] $event")
+        playerContext.androidContext!!.sendBroadcast(intent)
     }
 
     private suspend fun getSessionId(manifestUrl: String): String? = suspendCoroutine { cont ->
@@ -204,17 +210,21 @@ class GooglePalAddon(private val androidContext: Context) : PlayerAddon {
             val stringRequest = StringRequest(Request.Method.GET, manifestUrl, {
                 Log.d(TAG, it)
             }, { e ->
-                if (e is ServerError && (e.networkResponse.statusCode == HttpURLConnection.HTTP_MOVED_PERM || e.networkResponse.statusCode == HttpURLConnection.HTTP_MOVED_TEMP) && e.networkResponse.headers?.contains("location") == true) {
+                if (e is ServerError && (e.networkResponse.statusCode == HttpURLConnection.HTTP_MOVED_PERM || e.networkResponse.statusCode == HttpURLConnection.HTTP_MOVED_TEMP) && e.networkResponse.headers?.contains(
+                        "location"
+                    ) == true
+                ) {
                     val location = e.networkResponse.headers!!["location"] as String
                     // Assume there's one param only, and named "sessId"
                     val sessIdSplitList = location.split("$SESSION_ID_QUERY_PARAM_KEY=")
-                    cont.resume( if (sessIdSplitList.size != 2) null else sessIdSplitList.last())
+                    cont.resume(if (sessIdSplitList.size != 2) null else sessIdSplitList.last())
                 } else {
                     cont.resumeWithException(e)
                 }
             })
             queue.add(stringRequest)
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 
     private fun onPlay() {
@@ -230,7 +240,7 @@ class GooglePalAddon(private val androidContext: Context) : PlayerAddon {
     }
 
     private fun subscribeToPlayerEvents() {
-        playerContext.wrappedPlayer!!.addEventListener(object: CorePlayerEventListener {
+        playerContext.wrappedPlayer!!.addEventListener(object : CorePlayerEventListener {
             override fun onMediaPresentationResumed() {
                 if (playbackState != PlaybackState.STATE_PLAYING) {
                     playbackState = PlaybackState.STATE_PLAYING

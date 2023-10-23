@@ -1,6 +1,9 @@
 package com.github.harmonicinc.csabdemo.player
 
+import android.util.Log
 import androidx.media3.common.Player
+import androidx.media3.common.Player.STATE_BUFFERING
+import androidx.media3.common.Player.STATE_ENDED
 import androidx.media3.common.Player.STATE_READY
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
@@ -13,14 +16,39 @@ import java.util.Date
 @UnstableApi class CustomExoPlayer(
     private var player: ExoPlayer
 ): AbstractPlayer() {
+    private val tag = "CustomExoPlayer"
 
     private val playerEventListener: Player.Listener = object : Player.Listener {
+
         override fun onPlaybackStateChanged(playbackState: Int) {
-            if (player.playWhenReady && playbackState == STATE_READY) {
+            val playWhenReady = player.playWhenReady
+            Log.d(
+                tag,
+                "onPlayerStateChanged: playWhenReady=${playWhenReady} playbackState=${playbackState}"
+            )
+
+            if (playbackState == STATE_BUFFERING) {
+                eventListeners.forEach {
+                    it.onMediaPresentationBuffering(playWhenReady)
+                }
+            }
+
+            if (playbackState == STATE_ENDED) {
+                eventListeners.forEach {
+                    it.onMediaPresentationEnded()
+                }
+            }
+
+            if (!playWhenReady || playbackState == STATE_ENDED || playbackState == STATE_BUFFERING) {
+                eventListeners.forEach {
+                    it.onMediaPresentationPaused()
+                }
+            } else if (playbackState == STATE_READY) {
                 eventListeners.forEach {
                     it.onMediaPresentationResumed()
                 }
             }
+            Log.d(tag, "finished handling onPlayerStateChanged")
         }
     }
 
