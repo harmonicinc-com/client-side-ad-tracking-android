@@ -1,6 +1,8 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    id("maven-publish")
+    signing
 }
 
 @Suppress("UnstableApiUsage")
@@ -10,7 +12,6 @@ android {
 
     defaultConfig {
         minSdk = Constants.minSdkVersion
-        targetSdk = Constants.targetSdkVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -28,16 +29,20 @@ android {
             )
         }
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
+
     buildFeatures {
         buildConfig = true
     }
+
     testOptions {
         unitTests.all {
             it.jvmArgs("-noverify")
@@ -72,4 +77,83 @@ dependencies {
     testImplementation("org.apache.httpcomponents:httpclient:4.5.14")
 
     testImplementation("androidx.test.espresso:espresso-core:3.5.1")
+}
+
+/*
+    Publishing
+ */
+
+val publishedGroupId: String by project
+val artifactName: String by project
+val libraryName: String by project
+val libraryDescription: String by project
+val siteUrl: String by project
+val gitUrl: String by project
+val licenseName: String by project
+val licenseUrl: String by project
+val developerOrg: String by project
+val developerName: String by project
+
+// Credentials
+val ossrhUsername: String? = System.getenv("OSSRH_USERNAME")
+val ossrhPassword: String? = System.getenv("OSSRH_PASSWORD")
+ext["signing.keyId"] = System.getenv("SIGNING_KEY_ID")
+ext["signing.password"] = System.getenv("SIGNING_PASSWORD")
+ext["signing.secretKeyRingFile"] = System.getenv("SIGNING_SECRET_KEY_RING_FILE")
+
+val releaseVersion: String? = System.getenv("RELEASE_VERSION")
+val buildNumber: String? = System.getenv("BUILD_NUMBER")
+
+signing {
+    sign(publishing.publications)
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            groupId = publishedGroupId
+            artifactId = artifactName
+            version = "$releaseVersion.$buildNumber"
+            artifact("$buildDir/outputs/aar/${project.name}-release.aar")
+
+            pom {
+                name.set(libraryName)
+                description.set(libraryDescription)
+                url.set(siteUrl)
+
+                licenses {
+                    license {
+                        name.set(licenseName)
+                        url.set(licenseUrl)
+                    }
+                }
+                developers {
+                    developer {
+                        name.set(developerName)
+                    }
+                }
+                organization {
+                    name.set(developerOrg)
+                }
+                scm {
+                    connection.set(gitUrl)
+                    developerConnection.set(gitUrl)
+                    url.set(siteUrl)
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "sonatype"
+            val releasesRepoUrl = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            val snapshotsRepoUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+            url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
+
+            credentials {
+                username = System.getenv("OSSRH_DEPLOY_USERNAME")
+                password = System.getenv("OSSRH_DEPLOY_PASSWORD")
+            }
+        }
+    }
 }
