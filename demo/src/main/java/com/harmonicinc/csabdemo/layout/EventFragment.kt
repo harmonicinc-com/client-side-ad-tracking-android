@@ -1,4 +1,4 @@
-package com.github.harmonicinc.csabdemo.layout
+package com.harmonicinc.csabdemo.layout
 
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver

@@ -1,4 +1,4 @@
-package com.github.harmonicinc.csabdemo.layout
+package com.harmonicinc.csabdemo.layout
 
 import androidx.fragment.app.Fragment
 import androidx.media3.common.util.UnstableApi

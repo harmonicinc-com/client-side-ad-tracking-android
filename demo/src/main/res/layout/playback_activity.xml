@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.github.harmonicinc.csabdemo.layout.PlaybackActivity">
+    tools:context="com.github.harmonicinc.csabdemo.com.harmonicinc.csabdemo.layout.PlaybackActivity">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -20,7 +20,7 @@
 
             <androidx.fragment.app.FragmentContainerView
                 android:id="@+id/vos_player_fragment"
-                android:name="com.github.harmonicinc.csabdemo.layout.PlayerFragment"
+                android:name="com.harmonicinc.csabdemo.layout.PlayerFragment"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 tools:layout="@layout/player_view" />

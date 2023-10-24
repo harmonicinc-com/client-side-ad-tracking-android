@@ -8,7 +8,6 @@ import android.net.Uri
 import android.util.Log
 import android.view.View.OnClickListener
 import android.view.View.OnTouchListener
-import android.view.ViewGroup
 import com.android.volley.Request
 import com.android.volley.ServerError
 import com.android.volley.toolbox.BaseHttpStack
@@ -19,8 +18,6 @@ import com.google.ads.interactivemedia.pal.ConsentSettings
 import com.google.ads.interactivemedia.pal.NonceLoader
 import com.google.ads.interactivemedia.pal.NonceManager
 import com.google.ads.interactivemedia.pal.NonceRequest
-import com.harmonicinc.clientsideadtracking.player.PlaybackContext
-import com.harmonicinc.clientsideadtracking.player.PlayerAddon
 import com.harmonicinc.clientsideadtracking.player.PlayerContext
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
 import com.harmonicinc.clientsideadtracking.tracking.client.OMSDKClient
@@ -31,7 +28,7 @@ import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_NONCE_QU
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_PPID
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_SUPPORTED_API
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
-import com.harmonicinc.clientsideadtracking.player.baseplayer.CorePlayerEventListener
+import com.harmonicinc.clientsideadtracking.player.CorePlayerEventListener
 import com.harmonicinc.clientsideadtracking.tracking.adchoices.AdChoiceManager
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants
 import com.iab.omid.library.harmonicinc.Omid
@@ -47,7 +44,7 @@ class GooglePalAddon(
     androidContext: Context,
     httpStack: BaseHttpStack,
     private val nonceLoader: NonceLoader
-) : PlayerAddon {
+) {
     private var TAG = "GooglePALAddon"
     private var sessionId: String? = null
     private var ssaiSupported = false
@@ -58,10 +55,10 @@ class GooglePalAddon(
 
     private val urlFilenameRegex = Regex("[^/\\\\&\\?]+\\.\\w{3,4}(?=([\\?&].*\$|\$))")
     private val queue = Volley.newRequestQueue(androidContext, httpStack)
-    lateinit var trackingOverlay: TrackingOverlay
+    var trackingOverlay: TrackingOverlay? = null
     lateinit var adChoiceManager: AdChoiceManager
     private lateinit var nonceManager: NonceManager
-    private lateinit var metadataTracker: AdMetadataTracker
+    private var metadataTracker: AdMetadataTracker? = null
     private lateinit var playerContext: PlayerContext
 
     constructor(androidContext: Context) : this(
@@ -93,24 +90,24 @@ class GooglePalAddon(
         generateNonceForAdRequest()
     }
 
-    override fun prepareAfterPlayerViewCreated(playerContext: PlayerContext) {
+    fun prepareAfterPlayerViewCreated(playerContext: PlayerContext) {
         // Player is available only after this point
         this.playerContext = playerContext
 
         // Init tracking client
         metadataTracker = AdMetadataTracker(playerContext, queue)
-        omsdkClient = OMSDKClient(playerContext, metadataTracker)
-        pmmClient = PMMClient(playerContext, metadataTracker)
-        trackingOverlay = TrackingOverlay(playerContext, metadataTracker, omsdkClient, pmmClient)
-        adChoiceManager = AdChoiceManager(playerContext, metadataTracker)
+        omsdkClient = OMSDKClient(playerContext, metadataTracker!!)
+        pmmClient = PMMClient(playerContext, metadataTracker!!)
+        trackingOverlay = TrackingOverlay(playerContext, metadataTracker!!, omsdkClient, pmmClient)
+        adChoiceManager = AdChoiceManager(playerContext, metadataTracker!!)
 
         // Subscribe to player events
         subscribeToPlayerEvents()
     }
 
-    override fun cleanupAfterStop(playbackContext: PlaybackContext) {
-        trackingOverlay.onDestroy()
-        metadataTracker.onStopped()
+    fun cleanupAfterStop() {
+        trackingOverlay?.onDestroy()
+        metadataTracker?.onStopped()
 
         if (ssaiSupported) {
             sendPlaybackEnd()
@@ -179,7 +176,7 @@ class GooglePalAddon(
     // Called each time the viewer clicks an ad
     private val onVideoAdClick = OnClickListener {
         // Trigger on click only if ad is playing
-        if (metadataTracker.isPlayingAd()) {
+        if (metadataTracker?.isPlayingAd() == true) {
             Log.d(TAG, "Sending ad click event")
             nonceManager.sendAdClick()
             pushEventLog("sendAdClick")
@@ -190,7 +187,7 @@ class GooglePalAddon(
     // Called on every touch interaction with the player
     private val onVideoAdViewTouch = OnTouchListener { view, event ->
         view?.performClick()
-        if (metadataTracker.isPlayingAd()) {
+        if (metadataTracker?.isPlayingAd() == true) {
             Log.d(TAG, "Sending on touch event")
             nonceManager.sendAdTouch(event)
             pushEventLog("sendAdTouch")
@@ -234,7 +231,7 @@ class GooglePalAddon(
         }
 
         val metadataUrl = urlFilenameRegex.replace(this.manifestUrl!!, "metadata")
-        metadataTracker.onPlay(metadataUrl, sessionId!!)
+        metadataTracker?.onPlay(metadataUrl, sessionId!!)
 
         sendPlaybackStart()
     }

@@ -1,4 +1,4 @@
-package com.github.harmonicinc.csabdemo.layout
+package com.harmonicinc.csabdemo.layout
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -10,14 +10,14 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.github.harmonicinc.csabdemo.R
-import com.github.harmonicinc.csabdemo.player.CustomExoPlayer
-import com.harmonicinc.clientsideadtracking.player.PlayerAddon
+import com.harmonicinc.csabdemo.player.ExoPlayerAdapter
+import com.harmonicinc.clientsideadtracking.GooglePalAddon
 import com.harmonicinc.clientsideadtracking.player.PlayerContext
 
 @UnstableApi class PlayerFragment: PlaybackSupportFragment() {
     private var player: ExoPlayer? = null
     private lateinit var playerView: PlayerView
-    private val addons = arrayListOf<PlayerAddon>()
+    var googlePalAddon: GooglePalAddon? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -28,10 +28,6 @@ import com.harmonicinc.clientsideadtracking.player.PlayerContext
         layoutInflater.inflate(R.layout.player_view, v)
         playerView = v.findViewById(R.id.exoplayer_view)
         return v
-    }
-
-    fun pushAddon(addon: PlayerAddon) {
-        addons.add(addon)
     }
 
     fun onStart(url: String) {
@@ -50,12 +46,12 @@ import com.harmonicinc.clientsideadtracking.player.PlayerContext
         player = ExoPlayer.Builder(requireContext()).build()
         playerView.player = player
         val playerContext = PlayerContext(
-            CustomExoPlayer(player!!),
+            ExoPlayerAdapter(player!!),
             playerView,
             playerView.overlayFrameLayout,
             playerView.context
         )
-        addons.forEach { it.prepareAfterPlayerViewCreated(playerContext) }
+        googlePalAddon!!.prepareAfterPlayerViewCreated(playerContext)
 
         player?.let {
             it.setMediaItem(createMediaItem(url))
@@ -65,6 +61,7 @@ import com.harmonicinc.clientsideadtracking.player.PlayerContext
     }
 
     private fun releasePlayer() {
+        googlePalAddon?.cleanupAfterStop()
         player?.release()
         player = null
         playerView.player = null

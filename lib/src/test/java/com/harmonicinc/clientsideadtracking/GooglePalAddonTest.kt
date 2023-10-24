@@ -9,7 +9,7 @@ import com.android.volley.mock.MockHttpStack
 import com.android.volley.toolbox.HttpResponse
 import com.google.ads.interactivemedia.pal.NonceLoader
 import com.harmonicinc.clientsideadtracking.player.PlayerContext
-import com.harmonicinc.clientsideadtracking.player.baseplayer.AbstractPlayer
+import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -26,7 +26,7 @@ import kotlin.time.toDuration
 
 @RunWith(RobolectricTestRunner::class)
 class GooglePalAddonTest {
-    private var player = mockk<AbstractPlayer>()
+    private var player = mockk<PlayerAdapter>()
     private var playerView = mockk<ViewGroup>()
     private var nonceLoader = mockk<NonceLoader>()
 

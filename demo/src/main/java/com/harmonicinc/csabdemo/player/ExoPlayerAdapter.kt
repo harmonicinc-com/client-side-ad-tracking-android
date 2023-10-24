@@ -1,4 +1,4 @@
-package com.github.harmonicinc.csabdemo.player
+package com.harmonicinc.csabdemo.player
 
 import android.util.Log
 import androidx.media3.common.Player
@@ -10,12 +10,12 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.dash.manifest.DashManifest
 import androidx.media3.exoplayer.hls.HlsManifest
-import com.harmonicinc.clientsideadtracking.player.baseplayer.AbstractPlayer
+import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
 import java.util.Date
 
-@UnstableApi class CustomExoPlayer(
+@UnstableApi class ExoPlayerAdapter(
     private var player: ExoPlayer
-): AbstractPlayer() {
+): PlayerAdapter() {
     private val tag = "CustomExoPlayer"
 
     private val playerEventListener: Player.Listener = object : Player.Listener {

@@ -7,7 +7,7 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/event_list"
         android:name="com.github.harmonicinc.csabdemo.layout.EventFragment"
-        tools:context="com.github.harmonicinc.csabdemo.layout.EventFragment"
+        tools:context="com.github.harmonicinc.csabdemo.com.harmonicinc.csabdemo.layout.EventFragment"
         tools:listitem="@layout/event_log_fragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

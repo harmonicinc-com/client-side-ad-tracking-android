@@ -13,7 +13,7 @@ import com.harmonicinc.clientsideadtracking.tracking.model.AdBreak
 import com.harmonicinc.clientsideadtracking.tracking.model.AdVerification
 import com.harmonicinc.clientsideadtracking.tracking.model.Tracking
 import com.harmonicinc.clientsideadtracking.tracking.model.EventLog
-import com.harmonicinc.clientsideadtracking.player.baseplayer.CorePlayerEventListener
+import com.harmonicinc.clientsideadtracking.player.CorePlayerEventListener
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.OMSDK_INTENT_LOG_ACTION
 import com.iab.omid.library.harmonicinc.Omid
 import com.iab.omid.library.harmonicinc.adsession.AdEvents

@@ -1,4 +1,4 @@
-package com.github.harmonicinc.csabdemo.layout
+package com.harmonicinc.csabdemo.layout
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -22,7 +22,7 @@ import com.harmonicinc.clientsideadtracking.GooglePalAddon
         // Setup tabs & ExoPlayer
         val viewPager = findViewById<ViewPager2>(R.id.view_pager)
         playerFragment = (supportFragmentManager.findFragmentById(R.id.vos_player_fragment) as PlayerFragment?)!!
-        playerFragment.pushAddon(googlePalAddon!!)
+        playerFragment.googlePalAddon = googlePalAddon
         val adapter = PlayerFragmentPagerAdapter(playerFragment)
         viewPager.adapter = adapter
 

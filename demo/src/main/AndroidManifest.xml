@@ -25,7 +25,7 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
-            android:name="com.github.harmonicinc.csabdemo.layout.PlaybackActivity"
+            android:name="com.harmonicinc.csabdemo.layout.PlaybackActivity"
             android:configChanges="orientation|screenSize"
             android:exported="true"
             android:launchMode="singleTop">

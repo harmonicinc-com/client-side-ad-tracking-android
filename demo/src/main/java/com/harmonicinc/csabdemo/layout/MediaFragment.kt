@@ -1,4 +1,4 @@
-package com.github.harmonicinc.csabdemo.layout
+package com.harmonicinc.csabdemo.layout
 
 import android.os.Bundle
 import android.view.LayoutInflater
