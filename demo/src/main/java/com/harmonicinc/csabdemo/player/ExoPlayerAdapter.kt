@@ -1,9 +1,9 @@
 package com.harmonicinc.csabdemo.player
 
+import android.media.session.PlaybackState
 import android.util.Log
 import androidx.media3.common.Player
 import androidx.media3.common.Player.STATE_BUFFERING
-import androidx.media3.common.Player.STATE_ENDED
 import androidx.media3.common.Player.STATE_READY
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
@@ -16,10 +16,12 @@ import java.util.Date
 @UnstableApi class ExoPlayerAdapter(
     private var player: ExoPlayer
 ): PlayerAdapter() {
+    private var previousPlaybackState = PlaybackState.STATE_NONE
+
     private val tag = "CustomExoPlayer"
 
     private val playerEventListener: Player.Listener = object : Player.Listener {
-
+        // Need to handle buffer start/end only
         override fun onPlaybackStateChanged(playbackState: Int) {
             val playWhenReady = player.playWhenReady
             Log.d(
@@ -27,28 +29,31 @@ import java.util.Date
                 "onPlayerStateChanged: playWhenReady=${playWhenReady} playbackState=${playbackState}"
             )
 
-            if (playbackState == STATE_BUFFERING) {
-                eventListeners.forEach {
-                    it.onMediaPresentationBuffering(playWhenReady)
+            if (!playWhenReady) return
+            when (playbackState) {
+                STATE_BUFFERING -> {
+                    eventListeners.forEach {
+                        it.onBufferStart()
+                    }
                 }
+                STATE_READY -> {
+                    if (previousPlaybackState == STATE_BUFFERING) {
+                        eventListeners.forEach {
+                            it.onBufferEnd()
+                        }
+                    }
+                }
+                else -> {}
             }
-
-            if (playbackState == STATE_ENDED) {
-                eventListeners.forEach {
-                    it.onMediaPresentationEnded()
-                }
-            }
-
-            if (!playWhenReady || playbackState == STATE_ENDED || playbackState == STATE_BUFFERING) {
-                eventListeners.forEach {
-                    it.onMediaPresentationPaused()
-                }
-            } else if (playbackState == STATE_READY) {
-                eventListeners.forEach {
-                    it.onMediaPresentationResumed()
-                }
-            }
+            previousPlaybackState = playbackState
             Log.d(tag, "finished handling onPlayerStateChanged")
+        }
+
+        // Handle play/pause only
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            eventListeners.forEach {
+                if (playWhenReady) it.onResume() else it.onPause()
+            }
         }
     }
 

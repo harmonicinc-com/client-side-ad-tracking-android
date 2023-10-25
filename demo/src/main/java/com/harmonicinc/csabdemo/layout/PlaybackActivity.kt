@@ -8,10 +8,14 @@ import com.github.harmonicinc.csabdemo.R
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.harmonicinc.clientsideadtracking.GooglePalAddon
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @UnstableApi class PlaybackActivity : AppCompatActivity() {
     private lateinit var playerFragment: PlayerFragment
-    var googlePalAddon: GooglePalAddon? = null
+    private lateinit var mediaFragment: MediaFragment
+    private lateinit var googlePalAddon: GooglePalAddon
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,6 +28,7 @@ import com.harmonicinc.clientsideadtracking.GooglePalAddon
         playerFragment = (supportFragmentManager.findFragmentById(R.id.vos_player_fragment) as PlayerFragment?)!!
         playerFragment.googlePalAddon = googlePalAddon
         val adapter = PlayerFragmentPagerAdapter(playerFragment)
+        mediaFragment = adapter.getFragment(0) as MediaFragment
         viewPager.adapter = adapter
 
         val tabLayout = findViewById<TabLayout>(R.id.tab_layout)
@@ -32,20 +37,22 @@ import com.harmonicinc.clientsideadtracking.GooglePalAddon
         }.attach()
     }
 
-    suspend fun onResume(url: String) {
-        super.onResume()
-        var newUrl = url
-        if (googlePalAddon != null) {
-            googlePalAddon!!.prepareBeforeLoad(newUrl)
-            if (googlePalAddon!!.isSSAISupported()) {
-                newUrl = googlePalAddon!!.appendNonceToUrl(listOf(newUrl))[0]
+    fun onLoad() {
+        CoroutineScope(Dispatchers.Main).launch {
+            var newUrl = mediaFragment.getUrl()
+            if (newUrl != null) {
+                googlePalAddon.prepareBeforeLoad(newUrl)
+                if (googlePalAddon.isSSAISupported()) {
+                    newUrl = googlePalAddon.appendNonceToUrl(listOf(newUrl))[0]
+                }
+                mediaFragment.hideKeyboard()
+                playerFragment.onStart(newUrl)
             }
         }
-        playerFragment.onStart(newUrl)
     }
 
     public override fun onStop() {
-        super.onStop()
         playerFragment.onStop()
+        super.onStop()
     }
 }

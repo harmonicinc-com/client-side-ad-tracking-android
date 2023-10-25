@@ -12,7 +12,6 @@ import androidx.media3.ui.PlayerView
 import com.github.harmonicinc.csabdemo.R
 import com.harmonicinc.csabdemo.player.ExoPlayerAdapter
 import com.harmonicinc.clientsideadtracking.GooglePalAddon
-import com.harmonicinc.clientsideadtracking.player.PlayerContext
 
 @UnstableApi class PlayerFragment: PlaybackSupportFragment() {
     private var player: ExoPlayer? = null
@@ -45,13 +44,12 @@ import com.harmonicinc.clientsideadtracking.player.PlayerContext
     private fun initializePlayer(url: String) {
         player = ExoPlayer.Builder(requireContext()).build()
         playerView.player = player
-        val playerContext = PlayerContext(
+        googlePalAddon!!.prepareAfterPlayerViewCreated(
+            playerView.context,
             ExoPlayerAdapter(player!!),
-            playerView,
             playerView.overlayFrameLayout,
-            playerView.context
+            playerView
         )
-        googlePalAddon!!.prepareAfterPlayerViewCreated(playerContext)
 
         player?.let {
             it.setMediaItem(createMediaItem(url))

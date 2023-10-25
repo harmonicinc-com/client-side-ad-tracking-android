@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.github.harmonicinc.csabdemo.com.harmonicinc.csabdemo.layout.PlaybackActivity">
+    tools:context="com.harmonicinc.csabdemo.layout.PlaybackActivity">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -61,5 +61,18 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1" />
         </LinearLayout>
+
+        <androidx.coordinatorlayout.widget.CoordinatorLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:focusable="true">
+
+            <androidx.fragment.app.FragmentContainerView
+                android:id="@+id/playback_control_fragment"
+                android:name="com.harmonicinc.csabdemo.layout.PlaybackControlFragment"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:layout="@layout/playback_control_fragment" />
+        </androidx.coordinatorlayout.widget.CoordinatorLayout>
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

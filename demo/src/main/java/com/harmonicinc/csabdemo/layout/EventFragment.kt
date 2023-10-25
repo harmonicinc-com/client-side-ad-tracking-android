@@ -13,9 +13,10 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView.AdapterDataObserver
 import com.github.harmonicinc.csabdemo.R
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.harmonicinc.clientsideadtracking.tracking.util.Constants.OMSDK_INTENT_LOG_ACTION
+import com.harmonicinc.clientsideadtracking.tracking.util.Constants.CSAT_INTENT_LOG_ACTION
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,8 +40,9 @@ class EventFragment: Fragment() {
 //            holder.mContentView.text = events[events.size - position - 1]
             holder.mContentView.text = events[position]
         }
-
     }
+
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -51,6 +53,16 @@ class EventFragment: Fragment() {
         // Set the adapter
         val recyclerView = v.findViewById<RecyclerView>(R.id.event_list)
         recyclerView.layoutManager = LinearLayoutManager(context)
+
+        // Register adapter data observer, so recycler view will stick to bottom
+        val observer = object: AdapterDataObserver() {
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                recyclerView.layoutManager!!.smoothScrollToPosition(recyclerView, null, recyclerViewAdapter.itemCount)
+                super.onItemRangeInserted(positionStart, itemCount)
+            }
+        }
+
+        recyclerViewAdapter.registerAdapterDataObserver(observer)
         recyclerView.adapter = recyclerViewAdapter
 
         val clearLogBtn = v.findViewById<FloatingActionButton>(R.id.clearLog)
@@ -59,24 +71,19 @@ class EventFragment: Fragment() {
             events.clear()
             recyclerViewAdapter.notifyItemRangeRemoved(0, oldEventsLength)
         }
+        activity?.registerReceiver(broadcastReceiver, IntentFilter(CSAT_INTENT_LOG_ACTION))
         return v
     }
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
-    override fun onResume() {
-        super.onResume()
-        activity?.registerReceiver(broadcastReceiver, IntentFilter(OMSDK_INTENT_LOG_ACTION))
-    }
-
-    override fun onPause() {
-        super.onPause()
+    override fun onDestroyView() {
+        super.onDestroyView()
         activity?.unregisterReceiver(broadcastReceiver)
     }
 
     private val broadcastReceiver = object: BroadcastReceiver() {
         override fun onReceive(p0: Context?, p1: Intent?) {
             val action = p1?.action
-            if (action == OMSDK_INTENT_LOG_ACTION) {
+            if (action == CSAT_INTENT_LOG_ACTION) {
                 val msg = p1.getStringExtra("message")
                 if (msg != null) {
                     pushEventLog(msg)

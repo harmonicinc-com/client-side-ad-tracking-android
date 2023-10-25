@@ -1,22 +1,21 @@
 package com.harmonicinc.csabdemo.layout
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
+import android.view.inputmethod.InputMethodManager
 import androidx.fragment.app.Fragment
 import androidx.media3.common.util.UnstableApi
 import com.github.harmonicinc.csabdemo.R
-import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputLayout
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+
 
 @UnstableApi class MediaFragment: Fragment() {
     private lateinit var playbackActivity: PlaybackActivity
+    private lateinit var urlInputLayout: TextInputLayout
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -28,28 +27,23 @@ import kotlinx.coroutines.launch
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        urlInputLayout = view.findViewById(R.id.url)
         playbackActivity = activity as PlaybackActivity
+    }
 
-        val trackingOverlaySwitch = view.findViewById<MaterialSwitch>(R.id.tracking_overlay_switch)
-        trackingOverlaySwitch.setOnClickListener {
-            playbackActivity.googlePalAddon?.trackingOverlay?.showOverlay = trackingOverlaySwitch.isChecked
+    fun getUrl(): String? {
+        val url = urlInputLayout.editText?.text ?: ""
+        if (url.isEmpty()) {
+            showSnackbar("No URL entered")
+            return null
         }
+        return url.toString()
+    }
 
-        val loadBtn = view.findViewById<Button>(R.id.load_button)
-        val stopBtn = view.findViewById<Button>(R.id.stop_button)
-        loadBtn.setOnClickListener {
-            val url = view.findViewById<TextInputLayout>(R.id.url).editText?.text ?: ""
-            if (url.isEmpty()) {
-                showSnackbar("No URL entered")
-                return@setOnClickListener
-            }
-            CoroutineScope(Dispatchers.Main).launch {
-                playbackActivity.onResume(url.toString())
-            }
-        }
-        stopBtn.setOnClickListener {
-            playbackActivity.onStop()
-        }
+    fun hideKeyboard() {
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(urlInputLayout.windowToken, 0)
+        urlInputLayout.clearFocus()
     }
 
     private fun showSnackbar(msg: String) {

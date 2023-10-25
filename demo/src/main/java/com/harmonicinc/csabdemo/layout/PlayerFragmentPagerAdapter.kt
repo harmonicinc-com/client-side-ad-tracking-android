@@ -15,4 +15,6 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
     override fun createFragment(position: Int): Fragment = tabs.values.elementAt(position)
 
     fun getTabTitle(position: Int) = tabs.keys.elementAt(position)
+
+    fun getFragment(position: Int) = tabs.values.elementAt(position)
 }
