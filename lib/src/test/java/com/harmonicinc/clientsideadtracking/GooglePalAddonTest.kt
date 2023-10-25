@@ -3,7 +3,6 @@ package com.harmonicinc.clientsideadtracking
 import android.app.Activity
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import androidx.test.core.app.ApplicationProvider
 import com.android.volley.Header
 import com.android.volley.mock.MockHttpStack
 import com.android.volley.toolbox.HttpResponse
@@ -60,11 +59,5 @@ class GooglePalAddonTest {
     @Test
     @Ignore("WIP")
     fun testSubscribePlayerEvents() {
-        val playerContext = PlayerContext(
-            wrappedPlayer = player,
-            androidContext = ApplicationProvider.getApplicationContext(),
-            playerView = playerView,
-            overlayViewContainer = overlayViewContainer
-        )
     }
 }
