@@ -4,8 +4,9 @@ import android.content.Context
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import com.gtihub.harmonicinc.clientsideadtracking.R
-import com.harmonicinc.clientsideadtracking.player.PlayerContext
+import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
 import com.harmonicinc.clientsideadtracking.tracking.AdBreakListener
 import com.harmonicinc.clientsideadtracking.tracking.EventLogListener
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
@@ -25,7 +26,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class TrackingOverlay(
-    private val playerContext: PlayerContext,
+    context: Context,
+    private val playerAdapter: PlayerAdapter,
+    overlayViewContainer: ViewGroup?,
+    playerView: ViewGroup,
     private val tracker: AdMetadataTracker,
     private val omsdkClient: OMSDKClient?,
     private val pmmClient: PMMClient?
@@ -49,15 +53,15 @@ class TrackingOverlay(
 
     init {
         CoroutineScope(Dispatchers.Main).launch {
-            val inflater = playerContext.androidContext!!.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+            val inflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
             overlayView = inflater.inflate(R.layout.tracking_event_view, null)
             overlayView.visibility = if (showOverlay) View.VISIBLE else View.INVISIBLE
-            playerContext.overlayViewContainer?.let {
+            overlayViewContainer?.let {
                 OverlayHelper.addViewToContainerView(overlayView, it)
             } ?: run {
                 // add to top-level as workaround
                 Log.w("TrackingOverlay", "OverlayViewContainer missing")
-                OverlayHelper.addViewToContainerView(overlayView, playerContext.playerView!!)
+                OverlayHelper.addViewToContainerView(overlayView, playerView)
             }
             layoutController = LayoutController(overlayView)
             layoutController.start()
@@ -98,7 +102,7 @@ class TrackingOverlay(
     }
 
     private suspend fun updateLayout() {
-        val pos = DashHelper.getMpdTimeMs(playerContext.wrappedPlayer!!)
+        val pos = DashHelper.getMpdTimeMs(playerAdapter)
         layoutController.setRawPlayerPosition(pos / 1000)
 
         if (currentAdBreak == null) {

@@ -11,7 +11,6 @@ import android.widget.ImageView
 import android.widget.RelativeLayout
 import com.bumptech.glide.Glide
 import com.gtihub.harmonicinc.clientsideadtracking.R
-import com.harmonicinc.clientsideadtracking.player.PlayerContext
 import com.harmonicinc.clientsideadtracking.tracking.AdBreakListener
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
 import com.harmonicinc.clientsideadtracking.tracking.model.Ad
@@ -20,12 +19,13 @@ import com.harmonicinc.clientsideadtracking.tracking.model.icon.iconclicks.IconC
 
 
 class AdChoiceManager(
-    playerContext: PlayerContext,
+    private val context: Context,
+    overlayViewContainer: ViewGroup?,
+    playerView: ViewGroup,
     private val tracker: AdMetadataTracker
 ) {
     private var adChoiceView: RelativeLayout? = null
     private var iconFallbackImageView: ImageView? = null
-    private val context: Context = playerContext.androidContext!!
     private var iconShowing = false
     private val tag = "AdChoiceManager"
 
@@ -33,12 +33,12 @@ class AdChoiceManager(
         addListeners()
 
         if (adChoiceView == null) {
-            adChoiceView = inflateAdChoiceView(playerContext.androidContext!!)
+            adChoiceView = inflateAdChoiceView(context)
         }
-        playerContext.overlayViewContainer?.let {
+        overlayViewContainer?.let {
             addViewToContainerView(adChoiceView!!, it)
         } ?: run {
-            addViewToContainerView(adChoiceView!!, playerContext.playerView!!)
+            addViewToContainerView(adChoiceView!!, playerView)
         }
     }
 

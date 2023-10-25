@@ -8,7 +8,6 @@ import com.android.volley.Header
 import com.android.volley.mock.MockHttpStack
 import com.android.volley.toolbox.HttpResponse
 import com.google.ads.interactivemedia.pal.NonceLoader
-import com.harmonicinc.clientsideadtracking.player.PlayerContext
 import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
 import io.mockk.mockk

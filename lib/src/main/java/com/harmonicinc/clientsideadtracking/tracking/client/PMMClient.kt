@@ -1,11 +1,11 @@
 package com.harmonicinc.clientsideadtracking.tracking.client
 
-import com.harmonicinc.clientsideadtracking.player.PlayerContext
+import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
 import com.harmonicinc.clientsideadtracking.tracking.EventLogListener
 
 // Currently unused. Reserved for future implementations
-class PMMClient(playerContext: PlayerContext, private val tracker: AdMetadataTracker) {
+class PMMClient(playerAdapter: PlayerAdapter, private val tracker: AdMetadataTracker) {
     private val TAG: String = "PMMClient"
     private var eventLogListener: EventLogListener? = null
 

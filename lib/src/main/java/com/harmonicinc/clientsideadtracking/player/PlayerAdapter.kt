@@ -3,8 +3,8 @@ package com.harmonicinc.clientsideadtracking.player
 import java.util.concurrent.CopyOnWriteArrayList
 
 abstract class PlayerAdapter {
-    val eventListeners: CopyOnWriteArrayList<CorePlayerEventListener> = CopyOnWriteArrayList()
-    fun addEventListener(listener: CorePlayerEventListener) {
+    val eventListeners: CopyOnWriteArrayList<PlayerEventListener> = CopyOnWriteArrayList()
+    fun addEventListener(listener: PlayerEventListener) {
         eventListeners.addIfAbsent(listener)
     }
 

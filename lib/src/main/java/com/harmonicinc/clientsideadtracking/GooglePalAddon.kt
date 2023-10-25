@@ -3,11 +3,11 @@ package com.harmonicinc.clientsideadtracking
 import android.content.Context
 import android.content.Intent
 import android.content.res.Resources
-import android.media.session.PlaybackState
 import android.net.Uri
 import android.util.Log
 import android.view.View.OnClickListener
 import android.view.View.OnTouchListener
+import android.view.ViewGroup
 import com.android.volley.Request
 import com.android.volley.ServerError
 import com.android.volley.toolbox.BaseHttpStack
@@ -18,22 +18,20 @@ import com.google.ads.interactivemedia.pal.ConsentSettings
 import com.google.ads.interactivemedia.pal.NonceLoader
 import com.google.ads.interactivemedia.pal.NonceManager
 import com.google.ads.interactivemedia.pal.NonceRequest
-import com.harmonicinc.clientsideadtracking.player.PlayerContext
+import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
+import com.harmonicinc.clientsideadtracking.tracking.adchoices.AdChoiceManager
 import com.harmonicinc.clientsideadtracking.tracking.client.OMSDKClient
 import com.harmonicinc.clientsideadtracking.tracking.client.PMMClient
 import com.harmonicinc.clientsideadtracking.tracking.overlay.TrackingOverlay
+import com.harmonicinc.clientsideadtracking.tracking.util.Constants
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_DESCRIPTION_URL
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_NONCE_QUERY_PARAM_KEY
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_PPID
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_SUPPORTED_API
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
-import com.harmonicinc.clientsideadtracking.player.CorePlayerEventListener
-import com.harmonicinc.clientsideadtracking.tracking.adchoices.AdChoiceManager
-import com.harmonicinc.clientsideadtracking.tracking.util.Constants
 import com.iab.omid.library.harmonicinc.Omid
 import kotlinx.coroutines.tasks.await
-import java.lang.Exception
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.coroutines.resume
@@ -41,25 +39,23 @@ import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 class GooglePalAddon(
-    androidContext: Context,
+    private val androidContext: Context,
     httpStack: BaseHttpStack,
     private val nonceLoader: NonceLoader
 ) {
     private var TAG = "GooglePALAddon"
     private var sessionId: String? = null
     private var ssaiSupported = false
-    private var playbackState = PlaybackState.STATE_NONE
     private var manifestUrl: String? = null
     private var omsdkClient: OMSDKClient? = null
     private var pmmClient: PMMClient? = null
 
-    private val urlFilenameRegex = Regex("[^/\\\\&\\?]+\\.\\w{3,4}(?=([\\?&].*\$|\$))")
+    private val urlFilenameRegex = Regex("[^/\\\\&?]+\\.\\w{3,4}(?=([?&].*\$|\$))")
     private val queue = Volley.newRequestQueue(androidContext, httpStack)
     var trackingOverlay: TrackingOverlay? = null
     lateinit var adChoiceManager: AdChoiceManager
     private lateinit var nonceManager: NonceManager
     private var metadataTracker: AdMetadataTracker? = null
-    private lateinit var playerContext: PlayerContext
 
     constructor(androidContext: Context) : this(
         androidContext,
@@ -90,19 +86,21 @@ class GooglePalAddon(
         generateNonceForAdRequest()
     }
 
-    fun prepareAfterPlayerViewCreated(playerContext: PlayerContext) {
+    fun prepareAfterPlayerViewCreated(
+        context: Context,
+        playerAdapter: PlayerAdapter,
+        overlayViewContainer: ViewGroup?,
+        playerView: ViewGroup
+    ) {
         // Player is available only after this point
-        this.playerContext = playerContext
-
         // Init tracking client
-        metadataTracker = AdMetadataTracker(playerContext, queue)
-        omsdkClient = OMSDKClient(playerContext, metadataTracker!!)
-        pmmClient = PMMClient(playerContext, metadataTracker!!)
-        trackingOverlay = TrackingOverlay(playerContext, metadataTracker!!, omsdkClient, pmmClient)
-        adChoiceManager = AdChoiceManager(playerContext, metadataTracker!!)
+        metadataTracker = AdMetadataTracker(playerAdapter, queue)
+        omsdkClient = OMSDKClient(context, playerAdapter, playerView, metadataTracker!!)
+        pmmClient = PMMClient(playerAdapter, metadataTracker!!)
+        trackingOverlay = TrackingOverlay(context, playerAdapter, overlayViewContainer, playerView, metadataTracker!!, omsdkClient, pmmClient)
+        adChoiceManager = AdChoiceManager(context, overlayViewContainer, playerView, metadataTracker!!)
 
-        // Subscribe to player events
-        subscribeToPlayerEvents()
+        onPlay()
     }
 
     fun cleanupAfterStop() {
@@ -197,9 +195,9 @@ class GooglePalAddon(
 
     private fun pushEventLog(event: String) {
         // Fire intent
-        val intent = Intent(Constants.PAL_INTENT_LOG_ACTION)
+        val intent = Intent(Constants.CSAT_INTENT_LOG_ACTION)
         intent.putExtra("message", "[PAL] $event")
-        playerContext.androidContext!!.sendBroadcast(intent)
+        androidContext.sendBroadcast(intent)
     }
 
     private suspend fun getSessionId(manifestUrl: String): String? = suspendCoroutine { cont ->
@@ -234,16 +232,5 @@ class GooglePalAddon(
         metadataTracker?.onPlay(metadataUrl, sessionId!!)
 
         sendPlaybackStart()
-    }
-
-    private fun subscribeToPlayerEvents() {
-        playerContext.wrappedPlayer!!.addEventListener(object : CorePlayerEventListener {
-            override fun onMediaPresentationResumed() {
-                if (playbackState != PlaybackState.STATE_PLAYING) {
-                    playbackState = PlaybackState.STATE_PLAYING
-                    onPlay()
-                }
-            }
-        })
     }
 }

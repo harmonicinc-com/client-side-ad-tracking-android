@@ -1,9 +1,11 @@
 package com.harmonicinc.clientsideadtracking.tracking.client
 
+import android.content.Context
 import android.content.Intent
-import android.media.session.PlaybackState
 import android.util.Log
-import com.harmonicinc.clientsideadtracking.player.PlayerContext
+import android.view.View
+import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
+import com.harmonicinc.clientsideadtracking.player.PlayerEventListener
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
 import com.harmonicinc.clientsideadtracking.tracking.AdProgressListener
 import com.harmonicinc.clientsideadtracking.tracking.EventLogListener
@@ -11,10 +13,9 @@ import com.harmonicinc.clientsideadtracking.tracking.client.omsdk.AdSessionUtil
 import com.harmonicinc.clientsideadtracking.tracking.model.Ad
 import com.harmonicinc.clientsideadtracking.tracking.model.AdBreak
 import com.harmonicinc.clientsideadtracking.tracking.model.AdVerification
-import com.harmonicinc.clientsideadtracking.tracking.model.Tracking
 import com.harmonicinc.clientsideadtracking.tracking.model.EventLog
-import com.harmonicinc.clientsideadtracking.player.CorePlayerEventListener
-import com.harmonicinc.clientsideadtracking.tracking.util.Constants.OMSDK_INTENT_LOG_ACTION
+import com.harmonicinc.clientsideadtracking.tracking.model.Tracking
+import com.harmonicinc.clientsideadtracking.tracking.util.Constants.CSAT_INTENT_LOG_ACTION
 import com.iab.omid.library.harmonicinc.Omid
 import com.iab.omid.library.harmonicinc.adsession.AdEvents
 import com.iab.omid.library.harmonicinc.adsession.AdSession
@@ -27,14 +28,15 @@ import java.net.MalformedURLException
 import java.util.concurrent.CopyOnWriteArrayList
 
 class OMSDKClient(
-    private val playerContext: PlayerContext,
+    private val context: Context,
+    private val playerAdapter: PlayerAdapter,
+    private val playerView: View,
     private val tracker: AdMetadataTracker
 ) {
     private var adSession: AdSession? = null
     private var mediaEvents: MediaEvents? = null
     private var adEvents: AdEvents? = null
     private var adVerifications: List<AdVerification>? = null
-    private var playbackState = PlaybackState.STATE_BUFFERING
     private var eventLogListeners: CopyOnWriteArrayList<EventLogListener> = CopyOnWriteArrayList()
     private var currentAdBreak: AdBreak? = null
     private var currentAd: Ad? = null
@@ -44,7 +46,7 @@ class OMSDKClient(
     private val TAG = "OMSDKClient"
 
     init {
-        Omid.activate(playerContext.androidContext)
+        Omid.activate(context)
         Omid.updateLastActivity()
         initHandlers()
     }
@@ -62,8 +64,8 @@ class OMSDKClient(
 
     private fun start() {
         preFireEvent(Tracking.Event.START)
-        val duration = playerContext.wrappedPlayer?.getDuration()?.toFloat() ?: 0f
-        val volume = playerContext.wrappedPlayer?.getAudioVolume() ?: -1f
+        val duration = playerAdapter.getDuration().toFloat()
+        val volume = playerAdapter.getAudioVolume()
         Log.d(TAG, "mediaEvents.start($duration, $volume)")
         mediaEvents!!.start(duration, volume)
         pushEventLog(Tracking.Event.START)
@@ -165,9 +167,9 @@ class OMSDKClient(
             )
             eventLogListeners.forEach { it.onEvent(eventLog)}
             // Fire intent as well
-            val intent = Intent(OMSDK_INTENT_LOG_ACTION)
+            val intent = Intent(CSAT_INTENT_LOG_ACTION)
             intent.putExtra("message", "[${eventLog.clientTag}] ${eventLog.adBreakId} > ${eventLog.adId} > ${eventLog.event.name}")
-            playerContext.androidContext!!.sendBroadcast(intent)
+            context.sendBroadcast(intent)
         }
     }
 
@@ -197,33 +199,21 @@ class OMSDKClient(
             }
         })
 
-        playerContext.wrappedPlayer!!.addEventListener(object : CorePlayerEventListener {
-            override fun onMediaPresentationBuffering(playWhenReady: Boolean) {
-                if (playWhenReady) {
-                    bufferStart()
-                    playbackState = PlaybackState.STATE_BUFFERING
-                }
+        playerAdapter.addEventListener(object : PlayerEventListener {
+            override fun onBufferStart() {
+                bufferStart()
             }
 
-            override fun onMediaPresentationResumed() {
-                if (playbackState == PlaybackState.STATE_BUFFERING) {
-                    bufferEnd()
-                }
-                if (playbackState != PlaybackState.STATE_PLAYING) {
-                    playbackState = PlaybackState.STATE_PLAYING
-                    resume()
-                }
+            override fun onBufferEnd() {
+                bufferEnd()
             }
 
-            override fun onMediaPresentationPaused() {
-                if (playerContext.wrappedPlayer?.isPaused() == true && playbackState != PlaybackState.STATE_PAUSED && playbackState != PlaybackState.STATE_ERROR) {
-                    playbackState = PlaybackState.STATE_PAUSED
-                    pause()
-                }
+            override fun onPause() {
+                pause()
             }
 
-            override fun onError(error: Any) {
-                playbackState = PlaybackState.STATE_ERROR
+            override fun onResume() {
+                resume()
             }
         })
     }
@@ -241,7 +231,7 @@ class OMSDKClient(
     private fun createSession() {
         adSession = try {
             AdSessionUtil.getNativeAdSession(
-                playerContext.androidContext!!,
+                context,
                 CUSTOM_REFERENCE_DATA,
                 CreativeType.VIDEO,
                 adVerifications!!
@@ -252,7 +242,7 @@ class OMSDKClient(
         }
         mediaEvents = MediaEvents.createMediaEvents(adSession)
         adEvents = AdEvents.createAdEvents(adSession)
-        adSession!!.registerAdView(playerContext.playerView)
+        adSession!!.registerAdView(playerView)
 
         adSession!!.start()
         adEvents!!.loaded()

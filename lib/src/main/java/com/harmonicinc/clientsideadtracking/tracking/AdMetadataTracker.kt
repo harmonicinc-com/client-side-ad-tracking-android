@@ -2,7 +2,7 @@ package com.harmonicinc.clientsideadtracking.tracking
 
 import android.util.Log
 import com.android.volley.RequestQueue
-import com.harmonicinc.clientsideadtracking.player.PlayerContext
+import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
 import com.harmonicinc.clientsideadtracking.tracking.model.Ad
 import com.harmonicinc.clientsideadtracking.tracking.model.AdBreak
 import com.harmonicinc.clientsideadtracking.tracking.model.EventManifest
@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 
-class AdMetadataTracker(private var playerContext: PlayerContext, private val queue: RequestQueue) {
+class AdMetadataTracker(private val playerAdapter: PlayerAdapter, private val queue: RequestQueue) {
     private var progressJob: Job? = null
     private var metadataUpdateJob: Job? = null
     private var curEvent: Tracking.Event = Tracking.Event.UNKNOWN
@@ -73,7 +73,7 @@ class AdMetadataTracker(private var playerContext: PlayerContext, private val qu
         metadataUpdateJob = CoroutineScope(Dispatchers.IO).launch {
             while (isActive) {
                 try {
-                    val mpdTime = DashHelper.getMpdTimeMs(playerContext.wrappedPlayer!!)
+                    val mpdTime = DashHelper.getMpdTimeMs(playerAdapter)
                     eventRef.set(AdMetadataLoader.load(queue, metadataUrl, sessionId, mpdTime))
                 } catch (e: Exception) {
                     Log.e(TAG, "Unable to get metadata due to error: ${e.message}")
@@ -90,7 +90,7 @@ class AdMetadataTracker(private var playerContext: PlayerContext, private val qu
         progressJob = CoroutineScope(Dispatchers.Main).launch {
             while (isActive) {
                 delay(POST_PROGRESS_INTERVAL_MS)
-                val mpdTime = DashHelper.getMpdTimeMs(playerContext.wrappedPlayer!!)
+                val mpdTime = DashHelper.getMpdTimeMs(playerAdapter)
                 updateCurrentAds(mpdTime)
                 onProgress(mpdTime)
             }
@@ -166,7 +166,7 @@ class AdMetadataTracker(private var playerContext: PlayerContext, private val qu
         if (currentTracking == null) return
 
         // Check if playing at normal speed. We should not fire any beacon if player is fast-forwarding/rewinding
-        val isPlayingAtNormalSpeed = playerContext.wrappedPlayer!!.getPlaybackRate() in NORMAL_PLAYBACK_SPEED_RANGE
+        val isPlayingAtNormalSpeed = playerAdapter.getPlaybackRate() in NORMAL_PLAYBACK_SPEED_RANGE
         if (!isPlayingAtNormalSpeed) return
 
         for (i in 0 until currentTracking!!.size) {
