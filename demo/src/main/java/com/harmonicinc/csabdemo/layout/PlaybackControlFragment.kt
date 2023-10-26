@@ -27,10 +27,10 @@ import com.github.harmonicinc.csabdemo.R
         val loadBtn = view.findViewById<Button>(R.id.load_button)
         val stopBtn = view.findViewById<Button>(R.id.stop_button)
         loadBtn.setOnClickListener {
-            playbackActivity.onLoad()
+            playbackActivity.onPlayerLoad()
         }
         stopBtn.setOnClickListener {
-            playbackActivity.onStop()
+            playbackActivity.onPlayerStop()
         }
     }
 }

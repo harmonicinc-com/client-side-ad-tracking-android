@@ -9,8 +9,8 @@ import android.view.inputmethod.InputMethodManager
 import androidx.fragment.app.Fragment
 import androidx.media3.common.util.UnstableApi
 import com.github.harmonicinc.csabdemo.R
-import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputLayout
+import com.harmonicinc.csabdemo.utils.MaterialUtils.showSnackbar
 
 
 @UnstableApi class MediaFragment: Fragment() {
@@ -34,7 +34,7 @@ import com.google.android.material.textfield.TextInputLayout
     fun getUrl(): String? {
         val url = urlInputLayout.editText?.text ?: ""
         if (url.isEmpty()) {
-            showSnackbar("No URL entered")
+            showSnackbar("No URL entered", requireView())
             return null
         }
         return url.toString()
@@ -44,9 +44,5 @@ import com.google.android.material.textfield.TextInputLayout
         val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(urlInputLayout.windowToken, 0)
         urlInputLayout.clearFocus()
-    }
-
-    private fun showSnackbar(msg: String) {
-        Snackbar.make(requireView(), msg, Snackbar.LENGTH_SHORT).show()
     }
 }

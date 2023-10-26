@@ -2,12 +2,12 @@ package com.harmonicinc.clientsideadtracking
 
 import android.content.Context
 import android.content.Intent
-import android.content.res.Resources
 import android.net.Uri
 import android.util.Log
 import android.view.View.OnClickListener
 import android.view.View.OnTouchListener
 import android.view.ViewGroup
+import com.android.volley.DefaultRetryPolicy
 import com.android.volley.Request
 import com.android.volley.ServerError
 import com.android.volley.toolbox.BaseHttpStack
@@ -25,10 +25,7 @@ import com.harmonicinc.clientsideadtracking.tracking.client.OMSDKClient
 import com.harmonicinc.clientsideadtracking.tracking.client.PMMClient
 import com.harmonicinc.clientsideadtracking.tracking.overlay.TrackingOverlay
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants
-import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_DESCRIPTION_URL
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_NONCE_QUERY_PARAM_KEY
-import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_PPID
-import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_SUPPORTED_API
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
 import com.iab.omid.library.harmonicinc.Omid
 import kotlinx.coroutines.tasks.await
@@ -38,12 +35,13 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-class GooglePalAddon(
+class AdTrackingManager(
     private val androidContext: Context,
+    private val params: AdTrackingManagerParams,
     httpStack: BaseHttpStack,
     private val nonceLoader: NonceLoader
 ) {
-    private var TAG = "GooglePALAddon"
+    private var TAG = "AdTrackingManager"
     private var sessionId: String? = null
     private var ssaiSupported = false
     private var manifestUrl: String? = null
@@ -52,13 +50,14 @@ class GooglePalAddon(
 
     private val urlFilenameRegex = Regex("[^/\\\\&?]+\\.\\w{3,4}(?=([?&].*\$|\$))")
     private val queue = Volley.newRequestQueue(androidContext, httpStack)
-    var trackingOverlay: TrackingOverlay? = null
-    lateinit var adChoiceManager: AdChoiceManager
+    private lateinit var trackingOverlay: TrackingOverlay
+    private lateinit var adChoiceManager: AdChoiceManager
     private lateinit var nonceManager: NonceManager
-    private var metadataTracker: AdMetadataTracker? = null
+    private lateinit var metadataTracker: AdMetadataTracker
 
-    constructor(androidContext: Context) : this(
+    constructor(androidContext: Context, params: AdTrackingManagerParams) : this(
         androidContext,
+        params,
         object : HurlStack() {
             override fun createConnection(url: URL?): HttpURLConnection {
                 val connection = super.createConnection(url)
@@ -86,31 +85,41 @@ class GooglePalAddon(
         generateNonceForAdRequest()
     }
 
-    fun prepareAfterPlayerViewCreated(
+    fun onPlay(
         context: Context,
         playerAdapter: PlayerAdapter,
         overlayViewContainer: ViewGroup?,
         playerView: ViewGroup
     ) {
+        Log.i(TAG, "Ad Tracking manager starting")
         // Player is available only after this point
         // Init tracking client
         metadataTracker = AdMetadataTracker(playerAdapter, queue)
-        omsdkClient = OMSDKClient(context, playerAdapter, playerView, metadataTracker!!)
-        pmmClient = PMMClient(playerAdapter, metadataTracker!!)
-        trackingOverlay = TrackingOverlay(context, playerAdapter, overlayViewContainer, playerView, metadataTracker!!, omsdkClient, pmmClient)
-        adChoiceManager = AdChoiceManager(context, overlayViewContainer, playerView, metadataTracker!!)
+        omsdkClient = OMSDKClient(context, playerAdapter, playerView, metadataTracker)
+        pmmClient = PMMClient(playerAdapter, metadataTracker)
+        trackingOverlay = TrackingOverlay(context, playerAdapter, overlayViewContainer, playerView, metadataTracker, omsdkClient, pmmClient)
+        adChoiceManager = AdChoiceManager(context, overlayViewContainer, playerView, metadataTracker)
 
-        onPlay()
+        if (manifestUrl == null) {
+            Log.e(TAG, "Manifest URL not set. Unable to start metadata tracker & overlay")
+            return
+        }
+
+        val metadataUrl = urlFilenameRegex.replace(this.manifestUrl!!, "metadata")
+        metadataTracker.onPlay(metadataUrl, sessionId!!)
+
+        sendPlaybackStart()
+        Log.i(TAG, "Ad Tracking manager started")
     }
 
     fun cleanupAfterStop() {
-        trackingOverlay?.onDestroy()
-        metadataTracker?.onStopped()
+        trackingOverlay.onDestroy()
+        metadataTracker.onStopped()
 
         if (ssaiSupported) {
             sendPlaybackEnd()
         }
-        Log.i(TAG, "Stopped Google PAL addon")
+        Log.i(TAG, "Ad Tracking manager stopped")
     }
 
     fun appendNonceToUrl(urls: List<String>): List<String> {
@@ -130,28 +139,23 @@ class GooglePalAddon(
 
     private suspend fun generateNonceForAdRequest() {
         Log.d(TAG, "Generating nonce for ad request")
-        // NOTE: Assume this addon is used in Android TV only, where player is always fullscreen
-        // due to player display always return 0x0 before playback
-        val displayMetrics = Resources.getSystem().displayMetrics
-        val height = displayMetrics.heightPixels
-        val width = displayMetrics.widthPixels
 
         val nonceRequest = NonceRequest.builder()
-            .descriptionURL(PAL_DESCRIPTION_URL)
-            .iconsSupported(true)
+            .descriptionURL(params.descriptionUrl)
+            .iconsSupported(params.iconSupported)
             .omidVersion(Omid.getVersion())
 //            .omidPartnerVersion(com.harmonicinc.vosplayer.BuildConfig.VERSION_NAME)
 //            .omidPartnerName(BuildConfig.PARTNER_NAME)
-            .playerType("vosplayertvdemo")
-            .playerVersion("1.0.0")
-            .ppid(PAL_PPID)
+            .playerType(params.playerType)
+            .playerVersion(params.playerVersion)
+            .ppid(params.ppid)
             .sessionId(sessionId!!)
-            .supportedApiFrameworks(PAL_SUPPORTED_API)
-            .videoPlayerHeight(height)
-            .videoPlayerWidth(width)
-            .willAdAutoPlay(true)
-            .willAdPlayMuted(false)
-            .continuousPlayback(false)
+            .supportedApiFrameworks(params.supportedApiFrameworks)
+            .videoPlayerHeight(params.playerHeight)
+            .videoPlayerWidth(params.playerWidth)
+            .willAdAutoPlay(params.willAdPlayMuted)
+            .willAdPlayMuted(params.willAdPlayMuted)
+            .continuousPlayback(params.continuousPlayback)
             .build()
 
         nonceManager = nonceLoader.loadNonceManager(nonceRequest).await()
@@ -174,7 +178,7 @@ class GooglePalAddon(
     // Called each time the viewer clicks an ad
     private val onVideoAdClick = OnClickListener {
         // Trigger on click only if ad is playing
-        if (metadataTracker?.isPlayingAd() == true) {
+        if (metadataTracker.isPlayingAd() == true) {
             Log.d(TAG, "Sending ad click event")
             nonceManager.sendAdClick()
             pushEventLog("sendAdClick")
@@ -185,7 +189,7 @@ class GooglePalAddon(
     // Called on every touch interaction with the player
     private val onVideoAdViewTouch = OnTouchListener { view, event ->
         view?.performClick()
-        if (metadataTracker?.isPlayingAd() == true) {
+        if (metadataTracker.isPlayingAd() == true) {
             Log.d(TAG, "Sending on touch event")
             nonceManager.sendAdTouch(event)
             pushEventLog("sendAdTouch")
@@ -204,6 +208,7 @@ class GooglePalAddon(
         try {
             val stringRequest = StringRequest(Request.Method.GET, manifestUrl, {
                 Log.d(TAG, it)
+                cont.resume(null)
             }, { e ->
                 if (e is ServerError && (e.networkResponse.statusCode == HttpURLConnection.HTTP_MOVED_PERM || e.networkResponse.statusCode == HttpURLConnection.HTTP_MOVED_TEMP) && e.networkResponse.headers?.contains(
                         "location"
@@ -217,20 +222,10 @@ class GooglePalAddon(
                     cont.resumeWithException(e)
                 }
             })
+            stringRequest.retryPolicy = DefaultRetryPolicy(5000, 1, 1f)
             queue.add(stringRequest)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            cont.resumeWithException(e)
         }
-    }
-
-    private fun onPlay() {
-        if (manifestUrl == null) {
-            Log.e(TAG, "Manifest URL not set. Unable to start metadata tracker & overlay")
-            return
-        }
-
-        val metadataUrl = urlFilenameRegex.replace(this.manifestUrl!!, "metadata")
-        metadataTracker?.onPlay(metadataUrl, sessionId!!)
-
-        sendPlaybackStart()
     }
 }

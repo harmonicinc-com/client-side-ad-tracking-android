@@ -10,13 +10,11 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.github.harmonicinc.csabdemo.R
-import com.harmonicinc.csabdemo.player.ExoPlayerAdapter
-import com.harmonicinc.clientsideadtracking.GooglePalAddon
 
 @UnstableApi class PlayerFragment: PlaybackSupportFragment() {
-    private var player: ExoPlayer? = null
-    private lateinit var playerView: PlayerView
-    var googlePalAddon: GooglePalAddon? = null
+    var player: ExoPlayer? = null
+    lateinit var playerView: PlayerView
+    private lateinit var playbackActivity: PlaybackActivity
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -26,31 +24,17 @@ import com.harmonicinc.clientsideadtracking.GooglePalAddon
         val v = super.onCreateView(inflater, container, savedInstanceState) as ViewGroup
         layoutInflater.inflate(R.layout.player_view, v)
         playerView = v.findViewById(R.id.exoplayer_view)
+        playbackActivity = activity as PlaybackActivity
         return v
     }
 
-    fun onStart(url: String) {
-        if (player == null) {
-            initializePlayer(url)
-        }
-        playerView.onResume()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        releasePlayer()
-    }
-
-    private fun initializePlayer(url: String) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         player = ExoPlayer.Builder(requireContext()).build()
         playerView.player = player
-        googlePalAddon!!.prepareAfterPlayerViewCreated(
-            playerView.context,
-            ExoPlayerAdapter(player!!),
-            playerView.overlayFrameLayout,
-            playerView
-        )
+    }
 
+    fun onPlayerLoad(url: String) {
         player?.let {
             it.setMediaItem(createMediaItem(url))
             it.prepare()
@@ -58,11 +42,15 @@ import com.harmonicinc.clientsideadtracking.GooglePalAddon
         }
     }
 
-    private fun releasePlayer() {
-        googlePalAddon?.cleanupAfterStop()
+    fun onPlayerStop() {
+        player?.removeMediaItem(0)
+    }
+
+    override fun onDestroyView() {
         player?.release()
-        player = null
         playerView.player = null
+        player = null
+        super.onDestroyView()
     }
 
     private fun createMediaItem(url: String): MediaItem {

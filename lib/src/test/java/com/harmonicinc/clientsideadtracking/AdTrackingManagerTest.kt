@@ -23,7 +23,7 @@ import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
 @RunWith(RobolectricTestRunner::class)
-class GooglePalAddonTest {
+class AdTrackingManagerTest {
     private var player = mockk<PlayerAdapter>()
     private var playerView = mockk<ViewGroup>()
     private var nonceLoader = mockk<NonceLoader>()
@@ -44,14 +44,27 @@ class GooglePalAddonTest {
         val baseUrl = "http://www.example.com"
         val responseHeaders = listOf(Header("location", "$baseUrl&sessId=$sessId"))
         val fakeResponse = HttpResponse(HttpURLConnection.HTTP_MOVED_PERM, responseHeaders)
+        val adTrackingParams = AdTrackingManagerParams(
+            "",
+            true,
+            "unittest",
+            "0.0.1",
+            "",
+            setOf(7),
+            0,
+            0,
+            willAdAutoplay = false,
+            willAdPlayMuted = false,
+            continuousPlayback = false
+        )
 
         val mockHttpStack = MockHttpStack()
         mockHttpStack.setResponseToReturn(fakeResponse)
-        val googlePalAddon = GooglePalAddon(activity, mockHttpStack, nonceLoader)
-        googlePalAddon.prepareBeforeLoad(baseUrl)
+        val adTrackingManager = AdTrackingManager(activity, adTrackingParams, mockHttpStack, nonceLoader)
+        adTrackingManager.prepareBeforeLoad(baseUrl)
 
-        assertTrue(googlePalAddon.isSSAISupported())
-        val actualUrls = googlePalAddon.appendNonceToUrl(listOf(baseUrl))
+        assertTrue(adTrackingManager.isSSAISupported())
+        val actualUrls = adTrackingManager.appendNonceToUrl(listOf(baseUrl))
         assertTrue(actualUrls.isNotEmpty())
         assertTrue(actualUrls[0].contains("$SESSION_ID_QUERY_PARAM_KEY=$sessId"))
     }
