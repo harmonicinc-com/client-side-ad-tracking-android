@@ -93,6 +93,7 @@ val licenseName: String by project
 val licenseUrl: String by project
 val developerOrg: String by project
 val developerName: String by project
+val releaseVersion: String by project
 
 // Credentials
 val ossrhUsername: String? = System.getenv("OSSRH_USERNAME")
@@ -101,7 +102,6 @@ ext["signing.keyId"] = System.getenv("SIGNING_KEY_ID")
 ext["signing.password"] = System.getenv("SIGNING_PASSWORD")
 ext["signing.secretKeyRingFile"] = System.getenv("SIGNING_SECRET_KEY_RING_FILE")
 
-val releaseVersion: String? = System.getenv("RELEASE_VERSION")
 val buildNumber: String? = System.getenv("BUILD_NUMBER")
 
 signing {
