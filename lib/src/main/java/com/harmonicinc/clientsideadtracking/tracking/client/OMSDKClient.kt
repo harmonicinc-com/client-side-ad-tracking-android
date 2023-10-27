@@ -5,7 +5,6 @@ import android.content.Intent
 import android.util.Log
 import android.view.View
 import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
-import com.harmonicinc.clientsideadtracking.player.PlayerEventListener
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
 import com.harmonicinc.clientsideadtracking.tracking.AdProgressListener
 import com.harmonicinc.clientsideadtracking.tracking.EventLogListener
@@ -31,7 +30,8 @@ class OMSDKClient(
     private val context: Context,
     private val playerAdapter: PlayerAdapter,
     private val playerView: View,
-    private val tracker: AdMetadataTracker
+    private val tracker: AdMetadataTracker,
+    private val customReferenceData: String?
 ) {
     private var adSession: AdSession? = null
     private var mediaEvents: MediaEvents? = null
@@ -41,8 +41,6 @@ class OMSDKClient(
     private var currentAdBreak: AdBreak? = null
     private var currentAd: Ad? = null
 
-    // FIXME: WIP
-    private val CUSTOM_REFERENCE_DATA = "{\"user\":\"me\" }"
     private val TAG = "OMSDKClient"
 
     init {
@@ -54,6 +52,46 @@ class OMSDKClient(
     fun addEventLogListener(listener: EventLogListener) {
         eventLogListeners.addIfAbsent(listener)
     }
+    fun pause() {
+        if (isPlayingAd()) {
+            Log.d(TAG, "mediaEvents.pause()")
+            mediaEvents!!.pause()
+            pushEventLog(Tracking.Event.PAUSE)
+        }
+    }
+
+    fun resume() {
+        if (isPlayingAd()) {
+            Log.d(TAG, "mediaEvents.resume()")
+            mediaEvents!!.resume()
+            pushEventLog(Tracking.Event.RESUME)
+        }
+    }
+
+    fun bufferStart() {
+        if (isPlayingAd()) {
+            Log.d(TAG, "mediaEvents.bufferStart()")
+            mediaEvents!!.bufferStart()
+            pushEventLog(Tracking.Event.BUFFER_START)
+        }
+    }
+
+    fun bufferEnd() {
+        if (isPlayingAd()) {
+            Log.d(TAG, "mediaEvents.bufferFinish()")
+            mediaEvents!!.bufferFinish()
+            pushEventLog(Tracking.Event.BUFFER_END)
+        }
+    }
+
+    fun volumeChange(volume: Float) {
+        if (isPlayingAd()) {
+            Log.d(TAG, "mediaEvents.volumeChange()")
+            mediaEvents!!.volumeChange(volume)
+            pushEventLog(Tracking.Event.VOLUME)
+        }
+    }
+
 
     private fun impressionOccurred() {
         preFireEvent(Tracking.Event.IMPRESSION)
@@ -99,44 +137,6 @@ class OMSDKClient(
         pushEventLog(Tracking.Event.COMPLETE)
         destroySession()
     }
-
-    private fun pause() {
-        if (isPlayingAd()) {
-            Log.d(TAG, "mediaEvents.pause()")
-            mediaEvents!!.pause()
-            pushEventLog(Tracking.Event.PAUSE)
-        }
-    }
-
-    private fun resume() {
-        if (isPlayingAd()) {
-            Log.d(TAG, "mediaEvents.resume()")
-            mediaEvents!!.resume()
-            pushEventLog(Tracking.Event.RESUME)
-        }
-    }
-
-    private fun bufferStart() {
-        if (isPlayingAd()) {
-            Log.d(TAG, "mediaEvents.bufferStart()")
-            mediaEvents!!.bufferStart()
-            pushEventLog(Tracking.Event.BUFFER_START)
-        }
-    }
-
-    private fun bufferEnd() {
-        if (isPlayingAd()) {
-            Log.d(TAG, "mediaEvents.bufferFinish()")
-            mediaEvents!!.bufferFinish()
-            pushEventLog(Tracking.Event.BUFFER_END)
-        }
-    }
-
-    private fun volumeChange() {
-        // We don't have creative volume change, no need to handle it manually
-        TODO("Not yet implemented")
-    }
-
     private fun onSkipped() {
         Log.d(TAG, "mediaEvents.skipped()")
         mediaEvents?.skipped()
@@ -199,23 +199,6 @@ class OMSDKClient(
             }
         })
 
-        playerAdapter.addEventListener(object : PlayerEventListener {
-            override fun onBufferStart() {
-                bufferStart()
-            }
-
-            override fun onBufferEnd() {
-                bufferEnd()
-            }
-
-            override fun onPause() {
-                pause()
-            }
-
-            override fun onResume() {
-                resume()
-            }
-        })
     }
 
     private fun preFireEvent(event: Tracking.Event) {
@@ -232,7 +215,7 @@ class OMSDKClient(
         adSession = try {
             AdSessionUtil.getNativeAdSession(
                 context,
-                CUSTOM_REFERENCE_DATA,
+                customReferenceData,
                 CreativeType.VIDEO,
                 adVerifications!!
             )

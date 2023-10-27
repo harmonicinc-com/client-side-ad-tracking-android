@@ -11,15 +11,11 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.dash.manifest.DashManifest
 import androidx.media3.exoplayer.hls.HlsManifest
 import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
-import com.harmonicinc.clientsideadtracking.player.PlayerEventListener
 import java.util.Date
-import java.util.concurrent.CopyOnWriteArrayList
 
 @UnstableApi class ExoPlayerAdapter(
     private var player: ExoPlayer
 ): PlayerAdapter {
-    override val eventListeners: CopyOnWriteArrayList<PlayerEventListener>
-        get() = CopyOnWriteArrayList()
 
     private var previousPlaybackState = PlaybackState.STATE_NONE
 
@@ -37,15 +33,11 @@ import java.util.concurrent.CopyOnWriteArrayList
             if (!playWhenReady) return
             when (playbackState) {
                 STATE_BUFFERING -> {
-                    eventListeners.forEach {
-                        it.onBufferStart()
-                    }
+                    onBufferStart()
                 }
                 STATE_READY -> {
                     if (previousPlaybackState == STATE_BUFFERING) {
-                        eventListeners.forEach {
-                            it.onBufferEnd()
-                        }
+                        onBufferEnd()
                     }
                 }
                 else -> {}
@@ -56,9 +48,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 
         // Handle play/pause only
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-            eventListeners.forEach {
-                if (playWhenReady) it.onResume() else it.onPause()
-            }
+            if (playWhenReady) onResume() else onPause()
         }
     }
 

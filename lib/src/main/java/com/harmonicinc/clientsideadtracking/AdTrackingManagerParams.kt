@@ -7,9 +7,14 @@ data class AdTrackingManagerParams(
     val playerVersion: String,
     val ppid: String,
     val supportedApiFrameworks: Set<Int>,
-    var playerHeight: Int,
-    var playerWidth: Int,
+    val playerHeight: Int,
+    val playerWidth: Int,
     val willAdAutoplay: Boolean,
     val willAdPlayMuted: Boolean,
-    val continuousPlayback: Boolean
+    val continuousPlayback: Boolean,
+    // OMSDK params: Mandatory if using OMSDK
+    val omidPartnerVersion: String?,
+    val omidPartnerName: String?,
+    // Custom reference data in JSON string
+    val omidCustomReferenceData: String?
 )

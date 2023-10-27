@@ -23,27 +23,12 @@ import kotlinx.coroutines.launch
     private lateinit var mediaFragment: MediaFragment
     private lateinit var adTrackingManager: AdTrackingManager
     private lateinit var rootLayout: ConstraintLayout
-    private lateinit var adTrackingParams: AdTrackingManagerParams
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.playback_activity)
         rootLayout = findViewById(R.id.root_layout)
-
-        adTrackingParams = AdTrackingManagerParams(
-            "",
-            true,
-            "harmonicinc.csabdemo",
-            BuildConfig.VERSION_NAME,
-            "",
-            setOf(7),
-            0, // player fragment not created yet, no resolutions available
-            0, // player fragment not created yet, no resolutions available
-            willAdAutoplay = false,
-            willAdPlayMuted = false,
-            continuousPlayback = false
-        )
-        adTrackingManager = AdTrackingManager(this, adTrackingParams)
+        adTrackingManager = AdTrackingManager(this)
 
         // Setup tabs & ExoPlayer
         val viewPager = findViewById<ViewPager2>(R.id.view_pager)
@@ -60,9 +45,22 @@ import kotlinx.coroutines.launch
     }
 
     fun onPlayerLoad() {
-        // Update player width & height in params
-        adTrackingParams.playerWidth = playerFragment.playerView.width
-        adTrackingParams.playerHeight = playerFragment.playerView.height
+        val adTrackingParams = AdTrackingManagerParams(
+            "",
+            true,
+            "harmonicinc.csabdemo",
+            BuildConfig.VERSION_NAME,
+            "",
+            setOf(7),
+            playerFragment.playerView.height, // player fragment not created yet, no resolutions available
+            playerFragment.playerView.width, // player fragment not created yet, no resolutions available
+            willAdAutoplay = false,
+            willAdPlayMuted = false,
+            continuousPlayback = false,
+            null,
+            null,
+            null
+        )
 
         mediaFragment.hideKeyboard()
         val exceptionHandler = CoroutineExceptionHandler { _, e ->
@@ -71,7 +69,7 @@ import kotlinx.coroutines.launch
         CoroutineScope(Dispatchers.Main).launch(exceptionHandler) {
             var newUrl = mediaFragment.getUrl()
             if (newUrl != null) {
-                adTrackingManager.prepareBeforeLoad(newUrl)
+                adTrackingManager.prepareBeforeLoad(newUrl, adTrackingParams)
                 if (adTrackingManager.isSSAISupported()) {
                     newUrl = adTrackingManager.appendNonceToUrl(listOf(newUrl))[0]
 

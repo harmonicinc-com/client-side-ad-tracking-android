@@ -55,13 +55,16 @@ class AdTrackingManagerTest {
             0,
             willAdAutoplay = false,
             willAdPlayMuted = false,
-            continuousPlayback = false
+            continuousPlayback = false,
+            null,
+            null,
+            null
         )
 
         val mockHttpStack = MockHttpStack()
         mockHttpStack.setResponseToReturn(fakeResponse)
-        val adTrackingManager = AdTrackingManager(activity, adTrackingParams, mockHttpStack, nonceLoader)
-        adTrackingManager.prepareBeforeLoad(baseUrl)
+        val adTrackingManager = AdTrackingManager(activity, mockHttpStack, nonceLoader)
+        adTrackingManager.prepareBeforeLoad(baseUrl, adTrackingParams)
 
         assertTrue(adTrackingManager.isSSAISupported())
         val actualUrls = adTrackingManager.appendNonceToUrl(listOf(baseUrl))

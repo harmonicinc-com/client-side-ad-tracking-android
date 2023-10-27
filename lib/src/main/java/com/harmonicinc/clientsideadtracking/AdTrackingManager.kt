@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
-import android.view.View.OnClickListener
-import android.view.View.OnTouchListener
+import android.view.MotionEvent
+import android.view.View
 import android.view.ViewGroup
 import com.android.volley.DefaultRetryPolicy
 import com.android.volley.Request
@@ -19,6 +19,7 @@ import com.google.ads.interactivemedia.pal.NonceLoader
 import com.google.ads.interactivemedia.pal.NonceManager
 import com.google.ads.interactivemedia.pal.NonceRequest
 import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
+import com.harmonicinc.clientsideadtracking.player.PlayerEventListener
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
 import com.harmonicinc.clientsideadtracking.tracking.adchoices.AdChoiceManager
 import com.harmonicinc.clientsideadtracking.tracking.client.OMSDKClient
@@ -37,7 +38,6 @@ import kotlin.coroutines.suspendCoroutine
 
 class AdTrackingManager(
     private val androidContext: Context,
-    private val params: AdTrackingManagerParams,
     httpStack: BaseHttpStack,
     private val nonceLoader: NonceLoader
 ) {
@@ -54,10 +54,11 @@ class AdTrackingManager(
     private lateinit var adChoiceManager: AdChoiceManager
     private lateinit var nonceManager: NonceManager
     private lateinit var metadataTracker: AdMetadataTracker
+    private lateinit var params: AdTrackingManagerParams
+    private lateinit var playerAdapter: PlayerAdapter
 
-    constructor(androidContext: Context, params: AdTrackingManagerParams) : this(
+    constructor(androidContext: Context) : this(
         androidContext,
-        params,
         object : HurlStack() {
             override fun createConnection(url: URL?): HttpURLConnection {
                 val connection = super.createConnection(url)
@@ -72,8 +73,9 @@ class AdTrackingManager(
         )
     )
 
-    suspend fun prepareBeforeLoad(manifestUrl: String) {
+    suspend fun prepareBeforeLoad(manifestUrl: String, params: AdTrackingManagerParams) {
         this.manifestUrl = manifestUrl
+        this.params = params
         sessionId = getSessionId(manifestUrl)
         if (sessionId == null) {
             Log.w(TAG, "Unsupported SSAI stream")
@@ -82,7 +84,7 @@ class AdTrackingManager(
         ssaiSupported = true
 
         // Nonce manager must be initialized before playback
-        generateNonceForAdRequest()
+        generateNonceForAdRequest(params)
     }
 
     fun onPlay(
@@ -91,19 +93,22 @@ class AdTrackingManager(
         overlayViewContainer: ViewGroup?,
         playerView: ViewGroup
     ) {
+        if (manifestUrl == null) {
+            Log.e(TAG, "Manifest URL not set. Unable to start metadata tracker & overlay")
+            throw RuntimeException("Manifest URL not set. (Did you call prepareBeforeLoad?)")
+        }
+
         Log.i(TAG, "Ad Tracking manager starting")
         // Player is available only after this point
         // Init tracking client
+        this.playerAdapter = playerAdapter
         metadataTracker = AdMetadataTracker(playerAdapter, queue)
-        omsdkClient = OMSDKClient(context, playerAdapter, playerView, metadataTracker)
+        omsdkClient = OMSDKClient(context, playerAdapter, playerView, metadataTracker, params.omidCustomReferenceData)
         pmmClient = PMMClient(playerAdapter, metadataTracker)
         trackingOverlay = TrackingOverlay(context, playerAdapter, overlayViewContainer, playerView, metadataTracker, omsdkClient, pmmClient)
         adChoiceManager = AdChoiceManager(context, overlayViewContainer, playerView, metadataTracker)
 
-        if (manifestUrl == null) {
-            Log.e(TAG, "Manifest URL not set. Unable to start metadata tracker & overlay")
-            return
-        }
+        setupListeners()
 
         val metadataUrl = urlFilenameRegex.replace(this.manifestUrl!!, "metadata")
         metadataTracker.onPlay(metadataUrl, sessionId!!)
@@ -137,15 +142,15 @@ class AdTrackingManager(
         return ssaiSupported
     }
 
-    private suspend fun generateNonceForAdRequest() {
+    private suspend fun generateNonceForAdRequest(params: AdTrackingManagerParams) {
         Log.d(TAG, "Generating nonce for ad request")
 
         val nonceRequest = NonceRequest.builder()
             .descriptionURL(params.descriptionUrl)
             .iconsSupported(params.iconSupported)
             .omidVersion(Omid.getVersion())
-//            .omidPartnerVersion(com.harmonicinc.vosplayer.BuildConfig.VERSION_NAME)
-//            .omidPartnerName(BuildConfig.PARTNER_NAME)
+            .omidPartnerVersion(params.omidPartnerVersion ?: "")
+            .omidPartnerName(params.omidPartnerName ?: "")
             .playerType(params.playerType)
             .playerVersion(params.playerVersion)
             .ppid(params.ppid)
@@ -174,27 +179,24 @@ class AdTrackingManager(
         pushEventLog("sendPlaybackEnd")
     }
 
-    // No effect on Android TV?
     // Called each time the viewer clicks an ad
-    private val onVideoAdClick = OnClickListener {
+    private fun onVideoAdClick() {
         // Trigger on click only if ad is playing
-        if (metadataTracker.isPlayingAd() == true) {
+        if (metadataTracker.isPlayingAd()) {
             Log.d(TAG, "Sending ad click event")
             nonceManager.sendAdClick()
             pushEventLog("sendAdClick")
         }
     }
 
-    // No effect on Android TV?
     // Called on every touch interaction with the player
-    private val onVideoAdViewTouch = OnTouchListener { view, event ->
-        view?.performClick()
-        if (metadataTracker.isPlayingAd() == true) {
+    private fun onVideoAdViewTouch(view: View, event: MotionEvent) {
+        view.performClick()
+        if (metadataTracker.isPlayingAd()) {
             Log.d(TAG, "Sending on touch event")
             nonceManager.sendAdTouch(event)
             pushEventLog("sendAdTouch")
         }
-        false
     }
 
     private fun pushEventLog(event: String) {
@@ -227,5 +229,37 @@ class AdTrackingManager(
         } catch (e: Exception) {
             cont.resumeWithException(e)
         }
+    }
+
+    private fun setupListeners() {
+        playerAdapter.addEventListener(object : PlayerEventListener {
+            override fun onBufferStart() {
+                omsdkClient?.bufferStart()
+            }
+
+            override fun onBufferEnd() {
+                omsdkClient?.bufferEnd()
+            }
+
+            override fun onPause() {
+                omsdkClient?.pause()
+            }
+
+            override fun onResume() {
+                omsdkClient?.resume()
+            }
+
+            override fun onVideoAdClick() {
+                this@AdTrackingManager.onVideoAdClick()
+            }
+
+            override fun onVideoAdViewTouch(view: View, event: MotionEvent) {
+                this@AdTrackingManager.onVideoAdViewTouch(view, event)
+            }
+
+            override fun onVolumeChanged(volume: Float) {
+                omsdkClient?.volumeChange(volume)
+            }
+        })
     }
 }
