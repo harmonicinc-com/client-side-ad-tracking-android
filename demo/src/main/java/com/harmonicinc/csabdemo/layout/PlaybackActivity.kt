@@ -52,8 +52,8 @@ import kotlinx.coroutines.launch
             BuildConfig.VERSION_NAME,
             "",
             setOf(7),
-            playerFragment.playerView.height, // player fragment not created yet, no resolutions available
-            playerFragment.playerView.width, // player fragment not created yet, no resolutions available
+            playerFragment.playerView.height,
+            playerFragment.playerView.width,
             willAdAutoplay = false,
             willAdPlayMuted = false,
             continuousPlayback = false,

@@ -99,7 +99,6 @@ class AdTrackingManager(
         }
 
         Log.i(TAG, "Ad Tracking manager starting")
-        // Player is available only after this point
         // Init tracking client
         this.playerAdapter = playerAdapter
         metadataTracker = AdMetadataTracker(playerAdapter, queue)
@@ -140,6 +139,12 @@ class AdTrackingManager(
 
     fun isSSAISupported(): Boolean {
         return ssaiSupported
+    }
+
+    fun showTrackingOverlay(state: Boolean) {
+        if (::trackingOverlay.isInitialized) {
+            trackingOverlay.showOverlay = state
+        }
     }
 
     private suspend fun generateNonceForAdRequest(params: AdTrackingManagerParams) {
