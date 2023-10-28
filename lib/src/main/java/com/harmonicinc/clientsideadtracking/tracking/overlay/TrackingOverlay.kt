@@ -40,8 +40,8 @@ class TrackingOverlay(
     private var currentAd: Ad? = null
     private var currentTracking: List<Tracking>? = null
 
-    private lateinit var overlayView: View
-    private lateinit var layoutController: LayoutController
+    private val overlayView: View
+    private val layoutController: LayoutController
 
     private val updateDelayMs: Long = 500
 
@@ -52,23 +52,21 @@ class TrackingOverlay(
         }
 
     init {
-        CoroutineScope(Dispatchers.Main).launch {
-            val inflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-            overlayView = inflater.inflate(R.layout.tracking_event_view, null)
-            overlayView.visibility = if (showOverlay) View.VISIBLE else View.INVISIBLE
-            overlayViewContainer?.let {
-                OverlayHelper.addViewToContainerView(overlayView, it)
-            } ?: run {
-                // add to top-level as workaround
-                Log.w("TrackingOverlay", "OverlayViewContainer missing")
-                OverlayHelper.addViewToContainerView(overlayView, playerView)
-            }
-            layoutController = LayoutController(overlayView)
-            layoutController.start()
-
-            addListeners()
-            updateOverlayRunner()
+        val inflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        overlayView = inflater.inflate(R.layout.tracking_event_view, null)
+        overlayView.visibility = if (showOverlay) View.VISIBLE else View.INVISIBLE
+        overlayViewContainer?.let {
+            OverlayHelper.addViewToContainerView(overlayView, it)
+        } ?: run {
+            // add to top-level as workaround
+            Log.w("TrackingOverlay", "OverlayViewContainer missing")
+            OverlayHelper.addViewToContainerView(overlayView, playerView)
         }
+        layoutController = LayoutController(overlayView)
+        layoutController.start()
+
+        addListeners()
+        updateOverlayRunner()
     }
 
     fun onDestroy() {

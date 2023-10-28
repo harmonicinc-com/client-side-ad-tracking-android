@@ -19,7 +19,7 @@ import java.util.Date
 
     private var previousPlaybackState = PlaybackState.STATE_NONE
 
-    private val tag = "CustomExoPlayer"
+    private val tag = "ExoPlayerAdapter"
 
     private val playerEventListener: Player.Listener = object : Player.Listener {
         // Need to handle buffer start/end only
