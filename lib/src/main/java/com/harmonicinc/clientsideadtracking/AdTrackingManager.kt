@@ -48,6 +48,7 @@ class AdTrackingManager(
     private var manifestUrl: String? = null
     private var omsdkClient: OMSDKClient? = null
     private var pmmClient: PMMClient? = null
+    private var showOverlay = false
 
     private val urlFilenameRegex = Regex("[^/\\\\&?]+\\.\\w{3,4}(?=([?&].*\$|\$))")
     private val queue = Volley.newRequestQueue(androidContext, httpStack)
@@ -110,6 +111,8 @@ class AdTrackingManager(
         trackingOverlay = TrackingOverlay(context, playerAdapter, overlayViewContainer, playerView, metadataTracker, omsdkClient, pmmClient)
         adChoiceManager = AdChoiceManager(context, overlayViewContainer, playerView, metadataTracker)
 
+        trackingOverlay.showOverlay = showOverlay
+
         setupListeners()
 
         val metadataUrl = urlFilenameRegex.replace(this.manifestUrl!!, "metadata")
@@ -148,6 +151,7 @@ class AdTrackingManager(
         if (::trackingOverlay.isInitialized) {
             trackingOverlay.showOverlay = state
         }
+        showOverlay = state
     }
 
     private suspend fun generateNonceForAdRequest(params: AdTrackingManagerParams) {
