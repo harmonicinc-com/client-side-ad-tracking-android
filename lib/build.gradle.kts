@@ -50,12 +50,11 @@ android {
     }
 }
 
-val extraLibs: Configuration by configurations.creating
 
 dependencies {
     val coroutines_version = "1.7.1"
 
-    extraLibs(project(":lib:lib"))
+    implementation(project(":lib:lib"))
 
     // 3rd party libs
     implementation("com.google.android.gms:play-services-pal:20.1.1")
@@ -100,6 +99,9 @@ val developerOrg: String by project
 val developerName: String by project
 val releaseVersion: String by project
 
+// Exclude OMSDK local aar (named "lib")
+val excludedArtifact = setOf("lib")
+
 // Credentials
 val ossrhUsername: String? = System.getenv("OSSRH_USERNAME")
 val ossrhPassword: String? = System.getenv("OSSRH_PASSWORD")
@@ -108,13 +110,6 @@ ext["signing.password"] = System.getenv("SIGNING_PASSWORD")
 ext["signing.secretKeyRingFile"] = System.getenv("SIGNING_SECRET_KEY_RING_FILE")
 
 val buildNumber: String? = System.getenv("BUILD_NUMBER")
-
-tasks.withType<Jar> {
-    configurations
-        .filter { it.name == "extraLibs" }
-        .map { zipTree(it) }
-        .also { from(it) }
-}
 
 signing {
     sign(publishing.publications)
@@ -157,7 +152,8 @@ publishing {
                     val configurationNames = arrayOf("implementation", "api")
                     configurationNames.forEach { configurationName ->
                         configurations[configurationName].allDependencies.forEach {
-                            if (it.group != null) {
+                            // Exclude OMSDK AAR in POM as it is private
+                            if (it.group != null && it.name !in excludedArtifact) {
                                 val dependencyNode = dependenciesNode.appendNode("dependency")
                                 dependencyNode.appendNode("groupId", it.group)
                                 dependencyNode.appendNode("artifactId", it.name)
