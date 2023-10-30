@@ -50,15 +50,20 @@ android {
     }
 }
 
+val extraLibs: Configuration by configurations.creating
+
 dependencies {
     val coroutines_version = "1.7.1"
 
-    api(project(":lib:lib"))
-    api("com.google.android.gms:play-services-pal:20.1.1")
-    api("com.android.volley:volley:1.2.1")
-    api("com.github.bumptech.glide:glide:4.16.0")
-    api("com.google.android.tv:tv-ads:1.0.0")
+    extraLibs(project(":lib:lib"))
 
+    // 3rd party libs
+    implementation("com.google.android.gms:play-services-pal:20.1.1")
+    implementation("com.android.volley:volley:1.2.1")
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+    implementation("com.google.android.tv:tv-ads:1.0.0")
+
+    // Android / Kotlin stdlibs
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.leanback:leanback:1.0.0")
@@ -104,6 +109,13 @@ ext["signing.secretKeyRingFile"] = System.getenv("SIGNING_SECRET_KEY_RING_FILE")
 
 val buildNumber: String? = System.getenv("BUILD_NUMBER")
 
+tasks.withType<Jar> {
+    configurations
+        .filter { it.name == "extraLibs" }
+        .map { zipTree(it) }
+        .also { from(it) }
+}
+
 signing {
     sign(publishing.publications)
 }
@@ -139,6 +151,20 @@ publishing {
                     connection.set(gitUrl)
                     developerConnection.set(gitUrl)
                     url.set(siteUrl)
+                }
+                withXml {
+                    val dependenciesNode = asNode().appendNode("dependencies")
+                    val configurationNames = arrayOf("implementation", "api")
+                    configurationNames.forEach { configurationName ->
+                        configurations[configurationName].allDependencies.forEach {
+                            if (it.group != null) {
+                                val dependencyNode = dependenciesNode.appendNode("dependency")
+                                dependencyNode.appendNode("groupId", it.group)
+                                dependencyNode.appendNode("artifactId", it.name)
+                                dependencyNode.appendNode("version", it.version)
+                            }
+                        }
+                    }
                 }
             }
         }
