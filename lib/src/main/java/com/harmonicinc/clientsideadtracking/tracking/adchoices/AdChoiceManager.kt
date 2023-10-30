@@ -10,6 +10,8 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.RelativeLayout
 import com.bumptech.glide.Glide
+import com.google.android.tv.ads.AdsControlsManager
+import com.google.android.tv.ads.IconClickFallbackImages
 import com.gtihub.harmonicinc.clientsideadtracking.R
 import com.harmonicinc.clientsideadtracking.tracking.AdBreakListener
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
@@ -28,6 +30,7 @@ class AdChoiceManager(
     private var iconFallbackImageView: ImageView? = null
     private var iconShowing = false
     private val tag = "AdChoiceManager"
+    private val adsControlsManager = AdsControlsManager(context)
 
     init {
         addListeners()
@@ -83,23 +86,30 @@ class AdChoiceManager(
 
         imageView.setOnClickListener {
             try {
-                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(adIcon.iconClicks.iconClickThrough))
-                context.startActivity(browserIntent)
+                val fallbackImages = getIconClickFallbackImages(adIcon.iconClicks.iconClickFallbackImages)
+                adsControlsManager.handleIconClick(fallbackImages)
             } catch (e: Exception) {
-                if (adIcon.iconClicks.iconClickFallbackImages.isNotEmpty()) {
-                    val fallbackImg = adIcon.iconClicks.iconClickFallbackImages[0]
-                    iconFallbackImageView = getIconFallbackImageView(fallbackImg)
-                    iconFallbackImageView!!.setOnClickListener {
-                        adChoiceView?.removeView(it)
+                Log.w(tag, "Unable to render AT&C using Android TV ads lib, using alternate method")
+                try {
+                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(adIcon.iconClicks.iconClickThrough))
+                    context.startActivity(browserIntent)
+                } catch (e: Exception) {
+                    Log.w(tag, "Unable to render AT&C using alternate method, showing fallback image")
+                    if (adIcon.iconClicks.iconClickFallbackImages.isNotEmpty()) {
+                        val fallbackImg = adIcon.iconClicks.iconClickFallbackImages[0]
+                        iconFallbackImageView = getIconFallbackImageView(fallbackImg)
+                        iconFallbackImageView!!.setOnClickListener {
+                            adChoiceView?.removeView(it)
+                        }
+                        val fallbackRelativeLayoutParams = RelativeLayout.LayoutParams(
+                            fallbackImg.width,
+                            fallbackImg.height,
+                        )
+                        fallbackRelativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT)
+                        adChoiceView!!.addView(iconFallbackImageView, fallbackRelativeLayoutParams)
+                    } else {
+                        Log.e(tag, "Failed to show a fallback image")
                     }
-                    val fallbackRelativeLayoutParams = RelativeLayout.LayoutParams(
-                        fallbackImg.width,
-                        fallbackImg.height,
-                    )
-                    fallbackRelativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT)
-                    adChoiceView!!.addView(iconFallbackImageView, fallbackRelativeLayoutParams)
-                } else {
-                    Log.e(tag, "Failed to either open the click through link, or show a fallback image")
                 }
             }
         }
@@ -145,5 +155,19 @@ class AdChoiceManager(
         } else if (attr.yPosition != null) {
             params.topMargin = attr.yPosition
         }
+    }
+
+    private fun getIconClickFallbackImages(images: List<IconClickFallbackImage>): IconClickFallbackImages {
+        return IconClickFallbackImages.builder(
+            images.map {
+                com.google.android.tv.ads.IconClickFallbackImage.builder()
+                    .setWidth(it.width)
+                    .setHeight(it.height)
+                    .setAltText(it.altText)
+                    .setCreativeType(it.staticResource.creativeType)
+                    .setStaticResourceUri(it.staticResource.uri)
+                    .build()
+            }
+        ).build()
     }
 }

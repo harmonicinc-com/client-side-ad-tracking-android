@@ -44,6 +44,14 @@ import kotlinx.coroutines.launch
         }.attach()
     }
 
+    override fun onStop() {
+        if (adTrackingManager.isSSAISupported()) {
+            adTrackingManager.cleanupAfterStop()
+        }
+        playerFragment.onPlayerStop()
+        super.onStop()
+    }
+
     fun onPlayerLoad() {
         val adTrackingParams = AdTrackingManagerParams(
             "",
@@ -92,6 +100,5 @@ import kotlinx.coroutines.launch
             adTrackingManager.cleanupAfterStop()
         }
         playerFragment.onPlayerStop()
-        super.onStop()
     }
 }

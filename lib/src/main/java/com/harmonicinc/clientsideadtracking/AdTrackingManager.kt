@@ -18,6 +18,7 @@ import com.google.ads.interactivemedia.pal.ConsentSettings
 import com.google.ads.interactivemedia.pal.NonceLoader
 import com.google.ads.interactivemedia.pal.NonceManager
 import com.google.ads.interactivemedia.pal.NonceRequest
+import com.google.android.tv.ads.SignalCollector
 import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
 import com.harmonicinc.clientsideadtracking.player.PlayerEventListener
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
@@ -50,6 +51,8 @@ class AdTrackingManager(
 
     private val urlFilenameRegex = Regex("[^/\\\\&?]+\\.\\w{3,4}(?=([?&].*\$|\$))")
     private val queue = Volley.newRequestQueue(androidContext, httpStack)
+    private val signalCollector = SignalCollector()
+
     private lateinit var trackingOverlay: TrackingOverlay
     private lateinit var adChoiceManager: AdChoiceManager
     private lateinit var nonceManager: NonceManager
@@ -166,6 +169,7 @@ class AdTrackingManager(
             .willAdAutoPlay(params.willAdPlayMuted)
             .willAdPlayMuted(params.willAdPlayMuted)
             .continuousPlayback(params.continuousPlayback)
+            .platformSignalCollector(signalCollector)
             .build()
 
         nonceManager = nonceLoader.loadNonceManager(nonceRequest).await()

@@ -6,7 +6,7 @@ import org.json.JSONObject
 class IconClickFallbackImage(json: JSONObject) {
     val width: Int
     val height: Int
-    private val altText: String
+    val altText: String
     val staticResource: StaticResource
 
     init {
