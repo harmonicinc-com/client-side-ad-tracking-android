@@ -31,7 +31,8 @@ class OMSDKClient(
     private val playerAdapter: PlayerAdapter,
     private val playerView: View,
     private val tracker: AdMetadataTracker,
-    private val customReferenceData: String?
+    private val customReferenceData: String?,
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
     private var adSession: AdSession? = null
     private var mediaEvents: MediaEvents? = null
@@ -157,7 +158,7 @@ class OMSDKClient(
     private fun pushEventLog(event: Tracking.Event) {
         val adBreakId = currentAdBreak!!.id
         val adId = currentAd!!.id
-        CoroutineScope(Dispatchers.Main).launch {
+        coroutineScope.launch {
             val eventLog = EventLog(
                 "OMSDK",
                 adBreakId,

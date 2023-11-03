@@ -1,0 +1,67 @@
+{
+  "adBreaks": [{
+    "id": "269098710",
+    "startTime": 1560332865457,
+    "startDateTime": 1560332865457,
+    "duration": 28400,
+    "ads": [{
+      "id": "269098710",
+      "startTime": 1560332865457,
+      "startDateTime": 1560332865457,
+      "duration": 15015,
+      "trackingEvents": [{
+        "event": "impression",
+        "startTime": 1560332865457,
+        "duration": 15015,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Ad_With_Icons\u0026cn=defaultImpression"]
+      }],
+      "clickThrough": "http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Ad_With_Icons\u0026cn=defaultClick",
+      "clickTracking": "http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Ad_With_Icons\u0026cn=defaultClickTracking",
+      "icons": [{
+        "attributes": {
+          "height": "40",
+          "program": "AdChoices",
+          "width": "30"
+        },
+        "staticResource": {
+          "creativeType": "image/png",
+          "uri": "https://storage.googleapis.com/interactive-media-ads/images/icon_abg8.png"
+        },
+        "iconClicks": {
+          "iconClickThrough": "https://example.com?clickthrough=icon\u0026program=adchoices",
+          "iconClickTracking": [{
+            "uri": "https://example.com/conversion?label=icon_click\u0026program=adchoices"
+          }],
+          "iconClickFallbackImages": [{
+            "width": "400",
+            "height": "150",
+            "altText": "Alt icon fallback",
+            "staticResource": {
+              "creativeType": "image/png",
+              "uri": "https://storage.googleapis.com/interactive-media-ads/images/wta_dialog.png?size=1x"
+            }
+          }, {
+            "width": "800",
+            "height": "300",
+            "altText": "Alt icon fallback",
+            "staticResource": {
+              "creativeType": "image/png",
+              "uri": "https://storage.googleapis.com/interactive-media-ads/images/wta_dialog.png?size=2x"
+            }
+          }]
+        },
+        "iconViewTracking": ["https://example.com/conversion?label=icon_view\u0026program=adchoices"]
+      }]
+    }, {
+      "id": "269098714",
+      "startTime": 1560332880472,
+      "startDateTime": 1560332880472,
+      "duration": 13385,
+      "trackingEvents": []
+    }]
+  }],
+  "dataRange": {
+    "start": 1560332626257,
+    "end": 1560332893857
+  }
+}

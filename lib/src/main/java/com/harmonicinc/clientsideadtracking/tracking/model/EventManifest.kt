@@ -7,6 +7,7 @@ class EventManifest {
     val dataRange: DataRange = DataRange(0, 0)
     val adBreaks: ArrayList<AdBreak> = ArrayList()
 
+    // Improvements: Use Kotlin serialization
     fun parse(eventManifestStr: String) {
         val eventJson = JSONObject(eventManifestStr)
         val dataRangeJson = eventJson.optJSONObject("dataRange")

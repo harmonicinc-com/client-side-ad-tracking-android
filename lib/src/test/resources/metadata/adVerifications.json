@@ -1,0 +1,60 @@
+{
+  "adBreaks": [{
+    "id": "269098710",
+    "startTime": 1560332865457,
+    "startDateTime": 1560332865457,
+    "duration": 28400,
+    "ads": [{
+      "id": "269098710",
+      "startTime": 1560332865457,
+      "startDateTime": 1560332865457,
+      "duration": 15015,
+      "adVerifications": [{
+        "vendor": "vendor-1",
+        "javaScriptResource": {
+          "apiFramework": "api-1",
+          "browserOptional": false,
+          "uri": "http://mock/resoure.js"
+        },
+        "trackingEvents": [{
+          "event": "verificationNotExecuted",
+          "startTime": 1560332865457,
+          "duration": 15015,
+          "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Ad_With_Verifications\u0026cn=verificationNotExecuted"]
+        }],
+        "verificationParameters": "{\"a\":\"1\"}"
+      }, {
+        "vendor": "vendor-2",
+        "executableResource": {
+          "apiFramework": "api-2",
+          "uri": "http://mock/resoure.bin"
+        },
+        "trackingEvents": [{
+          "event": "verificationNotExecuted",
+          "startTime": 1560332865457,
+          "duration": 15015,
+          "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Ad_With_Verifications\u0026cn=verificationNotExecuted"]
+        }],
+        "verificationParameters": "{\"b\":\"2\"}"
+      }],
+      "trackingEvents": [{
+        "event": "impression",
+        "startTime": 1560332865457,
+        "duration": 15015,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Ad_With_Verifications\u0026cn=defaultImpression"]
+      }],
+      "clickThrough": "http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Ad_With_Verifications\u0026cn=defaultClick",
+      "clickTracking": "http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Ad_With_Verifications\u0026cn=defaultClickTracking"
+    }, {
+      "id": "269098714",
+      "startTime": 1560332880472,
+      "startDateTime": 1560332880472,
+      "duration": 13385,
+      "trackingEvents": []
+    }]
+  }],
+  "dataRange": {
+    "start": 1560332626257,
+    "end": 1560332893857
+  }
+}

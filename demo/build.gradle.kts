@@ -36,6 +36,12 @@ android {
     buildFeatures {
         buildConfig = true
     }
+    packaging {
+        resources {
+            // Workaround conflicting dependencies: Transitive from Gradle vs httpclient5
+            excludes += "META-INF/DEPENDENCIES"
+        }
+    }
 }
 
 dependencies {
