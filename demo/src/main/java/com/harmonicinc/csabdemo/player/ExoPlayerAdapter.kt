@@ -11,11 +11,14 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.dash.manifest.DashManifest
 import androidx.media3.exoplayer.hls.HlsManifest
 import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
+import com.harmonicinc.clientsideadtracking.player.PlayerEventListener
 import java.util.Date
+import java.util.concurrent.CopyOnWriteArrayList
 
 @UnstableApi class ExoPlayerAdapter(
-    private var player: ExoPlayer
+    private val player: ExoPlayer
 ): PlayerAdapter {
+    override val eventListeners = CopyOnWriteArrayList<PlayerEventListener>()
 
     private var previousPlaybackState = PlaybackState.STATE_NONE
 
