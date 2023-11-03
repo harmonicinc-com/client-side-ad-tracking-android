@@ -8,7 +8,7 @@ import android.view.ViewGroup.LayoutParams
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.TextView
-import com.gtihub.harmonicinc.clientsideadtracking.R
+import com.github.harmonicinc.clientsideadtracking.R
 import com.harmonicinc.clientsideadtracking.tracking.model.EventLog
 import java.text.SimpleDateFormat
 import java.util.Date

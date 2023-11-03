@@ -1,0 +1,103 @@
+{
+  "adBreaks": [{
+    "id": "269098710",
+    "startTime": 1560332865457,
+    "duration": 28400,
+    "ads": [{
+      "id": "269098710",
+      "startTime": 1560332865457,
+      "duration": 15015,
+      "clickThrough": "http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=defaultClick",
+      "clickTracking": "http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=defaultClickTracking",
+      "trackingEvents": [{
+        "event": "impression",
+        "startTime": 1560332865457,
+        "duration": 15015,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Harmonic_15s_A\u0026cn=defaultImpression"]
+      }, {
+        "event": "start",
+        "startTime": 1560332865457,
+        "duration": 0,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Harmonic_15s_A\u0026cn=start"]
+      }, {
+        "event": "firstQuartile",
+        "startTime": 1560332869211,
+        "duration": 0,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Harmonic_15s_A\u0026cn=firstQuartile"]
+      }, {
+        "event": "midpoint",
+        "startTime": 1560332872965,
+        "duration": 0,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Harmonic_15s_A\u0026cn=midpoint"]
+      }, {
+        "event": "thirdQuartile",
+        "startTime": 1560332876718,
+        "duration": 0,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Harmonic_15s_A\u0026cn=thirdQuartile"]
+      }, {
+        "event": "complete",
+        "startTime": 1560332880472,
+        "duration": 0,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000\u0026id=Harmonic_15s_A\u0026cn=complete"]
+      }, {
+        "event": "clickTracking",
+        "startTime": 1560332865457,
+        "duration": 0,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=clickTracking"]
+      }],
+      "companionAds": {
+        "attributes": {
+          "required": "all"
+        },
+        "companion": [
+          {
+            "attributes": {
+              "adSlotId": "",
+              "apiFramework": "",
+              "assetHeight": "200",
+              "assetWidth": "250",
+              "expandedHeight": "250",
+              "expandedWidth": "350",
+              "height": "600",
+              "id": "1232",
+              "pxratio": "",
+              "renderingMode": "",
+              "width": "400"
+            },
+            "staticResource": "https://www.iab.com/wp-content/uploads/2014/09/iab-tech-lab-6-644x290.png",
+            "iFrameResource": "",
+            "htmlResource": "",
+            "adParameters": "",
+            "altText": "",
+            "companionClickThrough": "https://iabtechlab.com?clickthrough",
+            "companionClickTracking": "https://iabtechlab.com?clicktracking",
+            "trackingEvents": [
+              {
+                "event": "clickTracking",
+                "startTime": 1560332865457,
+                "duration": 15015,
+                "signalingUrls": [
+                  "http://mock-ad-server/event?click1",
+                  "http://mock-ad-server/event?click2",
+                  "http://mock-ad-server/event?click3"
+                ]
+              },
+              {
+                "event": "clickThrough",
+                "startTime": 1560332865457,
+                "duration": 15015,
+                "signalingUrls": [
+                  "http://mock-ad-server/event?clickThrough1"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }]
+  }],
+  "dataRange": {
+    "start": 1560332626257,
+    "end": 1560332893857
+  }
+}

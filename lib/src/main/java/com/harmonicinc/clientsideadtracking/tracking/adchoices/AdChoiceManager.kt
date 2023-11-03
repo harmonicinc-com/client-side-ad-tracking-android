@@ -12,7 +12,7 @@ import android.widget.RelativeLayout
 import com.bumptech.glide.Glide
 import com.google.android.tv.ads.AdsControlsManager
 import com.google.android.tv.ads.IconClickFallbackImages
-import com.gtihub.harmonicinc.clientsideadtracking.R
+import com.github.harmonicinc.clientsideadtracking.R
 import com.harmonicinc.clientsideadtracking.tracking.AdBreakListener
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
 import com.harmonicinc.clientsideadtracking.tracking.model.Ad

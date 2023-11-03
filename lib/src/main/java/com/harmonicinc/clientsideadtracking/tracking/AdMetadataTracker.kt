@@ -1,7 +1,8 @@
 package com.harmonicinc.clientsideadtracking.tracking
 
 import android.util.Log
-import com.android.volley.RequestQueue
+import androidx.annotation.VisibleForTesting
+import com.harmonicinc.clientsideadtracking.OkHttpService
 import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
 import com.harmonicinc.clientsideadtracking.tracking.model.Ad
 import com.harmonicinc.clientsideadtracking.tracking.model.AdBreak
@@ -15,13 +16,22 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 
-class AdMetadataTracker(private val playerAdapter: PlayerAdapter, private val queue: RequestQueue) {
+class AdMetadataTracker(
+    private val playerAdapter: PlayerAdapter,
+    private val okHttpService: OkHttpService,
+    private val coroutineIOScope: CoroutineScope = CoroutineScope(Dispatchers.IO),
+    private val coroutineMainScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+) {
     private var progressJob: Job? = null
     private var metadataUpdateJob: Job? = null
-    private var curEvent: Tracking.Event = Tracking.Event.UNKNOWN
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    var curEvent: Tracking.Event = Tracking.Event.UNKNOWN
+
     private var currentAdBreak: AdBreak? = null
     private var currentAd: Ad? = null
     private var currentTracking: List<Tracking>? = null
@@ -70,11 +80,13 @@ class AdMetadataTracker(private val playerAdapter: PlayerAdapter, private val qu
 
     private fun startMetadataUpdateJob(metadataUrl: String, sessionId: String) {
         metadataUpdateJob?.cancel()
-        metadataUpdateJob = CoroutineScope(Dispatchers.IO).launch {
+        metadataUpdateJob = coroutineIOScope.launch {
             while (isActive) {
                 try {
-                    val mpdTime = DashHelper.getMpdTimeMs(playerAdapter)
-                    eventRef.set(AdMetadataLoader.load(queue, metadataUrl, sessionId, mpdTime))
+                    val mpdTime = withContext(coroutineMainScope.coroutineContext) {
+                        DashHelper.getMpdTimeMs(playerAdapter)
+                    }
+                    eventRef.set(AdMetadataLoader.load(okHttpService, metadataUrl, sessionId, mpdTime))
                 } catch (e: Exception) {
                     Log.e(TAG, "Unable to get metadata due to error: ${e.message}")
                     // Ignore error and keep retrying
@@ -87,7 +99,7 @@ class AdMetadataTracker(private val playerAdapter: PlayerAdapter, private val qu
 
     private fun postProgress() {
         progressJob?.cancel()
-        progressJob = CoroutineScope(Dispatchers.Main).launch {
+        progressJob = coroutineMainScope.launch {
             while (isActive) {
                 delay(POST_PROGRESS_INTERVAL_MS)
                 val mpdTime = DashHelper.getMpdTimeMs(playerAdapter)

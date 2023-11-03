@@ -1,7 +1,7 @@
 package com.harmonicinc.clientsideadtracking.tracking.client.omsdk
 
 import android.content.Context
-import com.gtihub.harmonicinc.clientsideadtracking.BuildConfig
+import com.github.harmonicinc.clientsideadtracking.BuildConfig
 import com.harmonicinc.clientsideadtracking.tracking.model.AdVerification
 import com.iab.omid.library.harmonicinc.Omid
 import com.iab.omid.library.harmonicinc.adsession.AdSession
