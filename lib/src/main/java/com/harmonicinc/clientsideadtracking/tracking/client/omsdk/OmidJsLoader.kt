@@ -1,7 +1,7 @@
 package com.harmonicinc.clientsideadtracking.tracking.client.omsdk
 
 import android.content.Context
-import com.gtihub.harmonicinc.clientsideadtracking.R
+import com.github.harmonicinc.clientsideadtracking.R
 import java.io.IOException
 import java.nio.charset.Charset
 

@@ -7,13 +7,7 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import com.android.volley.DefaultRetryPolicy
-import com.android.volley.Request
-import com.android.volley.ServerError
-import com.android.volley.toolbox.BaseHttpStack
-import com.android.volley.toolbox.HurlStack
-import com.android.volley.toolbox.StringRequest
-import com.android.volley.toolbox.Volley
+import androidx.annotation.VisibleForTesting
 import com.google.ads.interactivemedia.pal.ConsentSettings
 import com.google.ads.interactivemedia.pal.NonceLoader
 import com.google.ads.interactivemedia.pal.NonceManager
@@ -31,56 +25,49 @@ import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_NONCE_QU
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
 import com.iab.omid.library.harmonicinc.Omid
 import kotlinx.coroutines.tasks.await
-import java.net.HttpURLConnection
-import java.net.URL
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
 class AdTrackingManager(
     private val androidContext: Context,
-    httpStack: BaseHttpStack,
-    private val nonceLoader: NonceLoader
+    private val nonceLoader: NonceLoader,
+    private val okHttpService: OkHttpService
 ) {
     private var TAG = "AdTrackingManager"
     private var sessionId: String? = null
     private var ssaiSupported = false
     private var manifestUrl: String? = null
-    private var omsdkClient: OMSDKClient? = null
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    var omsdkClient: OMSDKClient? = null
     private var pmmClient: PMMClient? = null
     private var showOverlay = false
 
     private val urlFilenameRegex = Regex("[^/\\\\&?]+\\.\\w{3,4}(?=([?&].*\$|\$))")
-    private val queue = Volley.newRequestQueue(androidContext, httpStack)
     private val signalCollector = SignalCollector()
 
     private lateinit var trackingOverlay: TrackingOverlay
     private lateinit var adChoiceManager: AdChoiceManager
     private lateinit var nonceManager: NonceManager
-    private lateinit var metadataTracker: AdMetadataTracker
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    lateinit var metadataTracker: AdMetadataTracker
+
     private lateinit var params: AdTrackingManagerParams
     private lateinit var playerAdapter: PlayerAdapter
 
     constructor(androidContext: Context) : this(
         androidContext,
-        object : HurlStack() {
-            override fun createConnection(url: URL?): HttpURLConnection {
-                val connection = super.createConnection(url)
-                connection.instanceFollowRedirects = false
-                return connection
-            }
-        },
         NonceLoader(
             androidContext, ConsentSettings.builder()
                 .allowStorage(true)
                 .build()
-        )
+        ),
+        OkHttpService()
     )
 
     suspend fun prepareBeforeLoad(manifestUrl: String, params: AdTrackingManagerParams) {
         this.manifestUrl = manifestUrl
         this.params = params
-        sessionId = getSessionId(manifestUrl)
+        sessionId = okHttpService.getSessionId(manifestUrl)
         if (sessionId == null) {
             Log.w(TAG, "Unsupported SSAI stream")
             return
@@ -105,7 +92,7 @@ class AdTrackingManager(
         Log.i(TAG, "Ad Tracking manager starting")
         // Init tracking client
         this.playerAdapter = playerAdapter
-        metadataTracker = AdMetadataTracker(playerAdapter, queue)
+        metadataTracker = AdMetadataTracker(playerAdapter, okHttpService)
         omsdkClient = OMSDKClient(context, playerAdapter, playerView, metadataTracker, params.omidCustomReferenceData)
         pmmClient = PMMClient(playerAdapter, metadataTracker)
         trackingOverlay = TrackingOverlay(context, playerAdapter, overlayViewContainer, playerView, metadataTracker, omsdkClient, pmmClient)
@@ -217,31 +204,6 @@ class AdTrackingManager(
         val intent = Intent(Constants.CSAT_INTENT_LOG_ACTION)
         intent.putExtra("message", "[PAL] $event")
         androidContext.sendBroadcast(intent)
-    }
-
-    private suspend fun getSessionId(manifestUrl: String): String? = suspendCoroutine { cont ->
-        try {
-            val stringRequest = StringRequest(Request.Method.GET, manifestUrl, {
-                Log.d(TAG, it)
-                cont.resume(null)
-            }, { e ->
-                if (e is ServerError && (e.networkResponse.statusCode == HttpURLConnection.HTTP_MOVED_PERM || e.networkResponse.statusCode == HttpURLConnection.HTTP_MOVED_TEMP) && e.networkResponse.headers?.contains(
-                        "location"
-                    ) == true
-                ) {
-                    val location = e.networkResponse.headers!!["location"] as String
-                    // Assume there's one param only, and named "sessId"
-                    val sessIdSplitList = location.split("$SESSION_ID_QUERY_PARAM_KEY=")
-                    cont.resume(if (sessIdSplitList.size != 2) null else sessIdSplitList.last())
-                } else {
-                    cont.resumeWithException(e)
-                }
-            })
-            stringRequest.retryPolicy = DefaultRetryPolicy(5000, 1, 1f)
-            queue.add(stringRequest)
-        } catch (e: Exception) {
-            cont.resumeWithException(e)
-        }
     }
 
     private fun setupListeners() {

@@ -5,7 +5,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import com.gtihub.harmonicinc.clientsideadtracking.R
+import com.github.harmonicinc.clientsideadtracking.R
 import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
 import com.harmonicinc.clientsideadtracking.tracking.AdBreakListener
 import com.harmonicinc.clientsideadtracking.tracking.EventLogListener
@@ -99,7 +99,7 @@ class TrackingOverlay(
         tracker.addAdBreakListener(adBreakListener)
     }
 
-    private suspend fun updateLayout() {
+    private fun updateLayout() {
         val pos = DashHelper.getMpdTimeMs(playerAdapter)
         layoutController.setRawPlayerPosition(pos / 1000)
 
