@@ -22,13 +22,13 @@ Android 8.0 (API 26) or above
    Groovy:
    ```groovy
    dependencies {
-       implementation 'com.github.harmonic-inc.client-side-ad-tracking-android:0.1.4' 
+       implementation 'com.github.harmonicinc-com:client-side-ad-tracking-android:0.1.4' 
    }
    ```
    Kotlin:
    ```kotlin
    dependencies {
-       implementation("com.github.harmonic-inc.client-side-ad-tracking-android:0.1.4") 
+       implementation("com.github.harmonicinc-com:client-side-ad-tracking-android:0.1.4") 
    }
    ```
    Change version to the latest available. You may find the latest version [here](https://central.sonatype.com/artifact/com.github.harmonicinc-com/client-side-ad-tracking-android/).
