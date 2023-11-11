@@ -166,6 +166,63 @@ Android 8.0 (API 26) or above
      adTrackingManager.cleanupAfterStop()
      ```
 
+## Development
+### Monitor traffic with Charles Proxy
+Follow below steps so traffic (especially HTTPS) can be proxied & decrypted by Charles
+1. Open Charles Proxy, go to Help > SSL Proxying > Save Charles Root Certificate
+2. Save as `<your_android_app_project_root>/src/main/res/raw/charles_ssl_cert.pem`
+3. Create an XML under `<root>/src/main/res/xml/network_security_config.xml` with the following content:
+   ```xml
+    <network-security-config>
+       <debug-overrides>
+           <trust-anchors>
+               <!-- Trust user added CAs while debuggable only -->
+               <certificates src="user" />
+               <certificates src="@raw/charles_ssl_cert" />
+           </trust-anchors>
+       </debug-overrides>
+   </network-security-config>
+   ```
+4. Reference to the new config in your app's manifest (i.e. `AndroidManifest.xml`)
+   ```xml
+   <?xml version="1.0" encoding="utf-8"?>
+   <manifest>
+       <application android:networkSecurityConfig="@xml/network_security_config">
+       </application>
+   </manifest>
+   ```
+5. Configure the proxy settings on your Android device/emulator. Please refer to your device documentation for instructions.
+6. You should now be able to capture SSL traffic in Charles. Look for segments/manifest/metadata requests and see if you can view the response body.
+
+### HTTP requests
+> [!NOTE]  
+> Allowing insecure traffic is not recommended in production environment. Remember to undo the changes before publishing.
+
+Android apps by default blocks plain text traffic. If you would like to play insecure streams (HTTP):
+- In your app's manifest (i.e. `AndroidManifest.xml`), add an extra flag
+  ```xml
+  <?xml version="1.0" encoding="utf-8"?>
+  <manifest>
+      <application android:usesCleartextTraffic="true">
+      </application>
+  </manifest>
+  ```
+#### If your Android is running P (aka Android 9) or higher, do also:
+- Create an XML under `<root>/src/main/res/xml/network_security_config.xml` with the following content:
+  ```xml
+  <network-security-config>
+      <base-config cleartextTrafficPermitted="true" />
+  </network-security-config>
+  ```
+- Reference to the new config in your app's manifest (i.e. `AndroidManifest.xml`)
+  ```xml
+  <?xml version="1.0" encoding="utf-8"?>
+  <manifest>
+      <application android:networkSecurityConfig="@xml/network_security_config">
+      </application>
+  </manifest>
+  ```
+
 ## Appendix
 ### Tracking overlay
 To show/hide the tracking overlay, call `showTrackingOverlay`
