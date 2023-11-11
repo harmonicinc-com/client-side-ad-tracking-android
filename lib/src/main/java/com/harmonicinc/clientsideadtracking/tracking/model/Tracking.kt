@@ -1,10 +1,11 @@
 package com.harmonicinc.clientsideadtracking.tracking.model
 
+import com.harmonicinc.clientsideadtracking.tracking.extensions.toList
 import org.json.JSONObject
 
 class Tracking(
     var event: Event = Event.UNKNOWN,
-    var url: String = "",
+    var url: List<String> = listOf(),
     var startTime: Long = 0L
 ) {
     var fired = false
@@ -32,7 +33,7 @@ class Tracking(
 
     fun parse(json: JSONObject) {
         this.event = this.eventMap(json.optString("event"))
-        this.url = json.optJSONArray("signalingUrls")?.optString(0) ?: ""
+        this.url = json.optJSONArray("signalingUrls")?.toList() as List<String>? ?: listOf()
         this.startTime = json.optLong("startTime")
     }
 
