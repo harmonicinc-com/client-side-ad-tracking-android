@@ -11,6 +11,7 @@ import android.view.ViewTreeObserver
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.RelativeLayout
+import androidx.core.view.contains
 import com.bumptech.glide.Glide
 import com.github.harmonicinc.clientsideadtracking.R
 import com.google.android.tv.ads.AdsControlsManager
@@ -128,9 +129,6 @@ class AdChoiceManager(
             }
         }
 
-        imageButton.setOnFocusChangeListener { view, b ->
-            view.alpha = if (b) 0.5f else 1f
-        }
         imageButton.viewTreeObserver.addOnGlobalFocusChangeListener(onTvFocusChangeListener)
 
         adChoiceView!!.addView(imageButton, relativeLayoutParams)
@@ -142,8 +140,8 @@ class AdChoiceManager(
 
     private val onTvFocusChangeListener =
         ViewTreeObserver.OnGlobalFocusChangeListener { oldV, newV ->
-            if (oldV == imageButton && newV != null) {
-                oldV?.requestFocus()
+            if (oldV != null && adChoiceView?.contains(oldV) == true && newV != null && adChoiceView?.contains(newV) == false) {
+                oldV.requestFocus()
             }
         }
 
