@@ -50,7 +50,7 @@ Android 8.0 (API 26) or above
       Kotlin:
       ```kotlin
       dependencies {
-          implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.ar"))))
+          implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
           // or just include everything
           implementation(fileTree("libs"))
           ...
@@ -156,7 +156,7 @@ Android 8.0 (API 26) or above
      adTrackingManager.onPlay(
         playerContext, // context in your player view
         playerAdapter, // adapter created above
-        overlayFrameLayout?, // A frame layout for showing overlays (e.g. WTA icon, tracking debug overlay)
+        overlayFrameLayout?, // Optional. A frame layout for showing overlays (e.g. WTA icon, tracking debug overlay)
         playerView // Your player view. Fallback to this if no overlay frame layout is provided
      )
      ```

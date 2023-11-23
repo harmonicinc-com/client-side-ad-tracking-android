@@ -16,12 +16,10 @@ jobs:
     - name: Set release version
       run: |
         echo "RELEASE_VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
-        echo RELEASE_VERSION: $RELEASE_VERSION
 
     - name: Set patch version
       run: |
         echo "BUILD_NUMBER=`echo $RELEASE_VERSION | sed -r 's/v?([0-9]+\.){2}([0-9]+).*/\2/'`" >> $GITHUB_ENV
-        echo BUILD_NUMBER: $BUILD_NUMBER
 
     - uses: actions/checkout@v3
 

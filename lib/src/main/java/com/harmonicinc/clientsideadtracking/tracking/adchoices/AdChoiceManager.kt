@@ -7,12 +7,14 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.RelativeLayout
 import com.bumptech.glide.Glide
+import com.github.harmonicinc.clientsideadtracking.R
 import com.google.android.tv.ads.AdsControlsManager
 import com.google.android.tv.ads.IconClickFallbackImages
-import com.github.harmonicinc.clientsideadtracking.R
 import com.harmonicinc.clientsideadtracking.tracking.AdBreakListener
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
 import com.harmonicinc.clientsideadtracking.tracking.model.Ad
@@ -29,6 +31,7 @@ class AdChoiceManager(
     private var adChoiceView: RelativeLayout? = null
     private var iconFallbackImageView: ImageView? = null
     private var iconShowing = false
+    private var imageButton: ImageButton? = null
     private val tag = "AdChoiceManager"
     private val adsControlsManager = AdsControlsManager(context)
 
@@ -75,16 +78,20 @@ class AdChoiceManager(
         val adIcon = ad.icons[0]
 
         // Download AdChoice icon
-        val imageView = ImageView(context)
-        Glide.with(context).load(adIcon.staticResource.uri).into(imageView)
+        val imageButton = ImageButton(context)
+        Glide.with(context).load(adIcon.staticResource.uri).into(imageButton)
         val relativeLayoutParams = RelativeLayout.LayoutParams(
             adIcon.attributes.width,
             adIcon.attributes.height,
         )
         setImagePosition(relativeLayoutParams, adIcon.attributes)
-        imageView.layoutParams = relativeLayoutParams
+        imageButton.layoutParams = relativeLayoutParams
+        imageButton.setPadding(0, 0, 0, 0)
+        imageButton.isClickable = true
+        imageButton.isFocusable = true
+        imageButton.setBackgroundResource(R.drawable.adchoices_selector)
 
-        imageView.setOnClickListener {
+        imageButton.setOnClickListener {
             try {
                 val fallbackImages = getIconClickFallbackImages(adIcon.iconClicks.iconClickFallbackImages)
                 adsControlsManager.handleIconClick(fallbackImages)
@@ -114,15 +121,31 @@ class AdChoiceManager(
             }
         }
 
-        adChoiceView!!.addView(imageView, relativeLayoutParams)
+        imageButton.setOnFocusChangeListener { view, b ->
+            view.alpha = if (b) 0.5f else 1f
+        }
+        imageButton.viewTreeObserver.addOnGlobalFocusChangeListener(onTvFocusChangeListener)
+
+        adChoiceView!!.addView(imageButton, relativeLayoutParams)
         adChoiceView!!.visibility = View.VISIBLE
         iconShowing = true
+
+        imageButton.requestFocus()
     }
+
+    private val onTvFocusChangeListener =
+        ViewTreeObserver.OnGlobalFocusChangeListener { oldV, newV ->
+            if (oldV == imageButton && newV != null) {
+                oldV?.requestFocus()
+            }
+        }
 
     private fun hideAdChoice() {
         adChoiceView?.removeAllViews()
         adChoiceView?.visibility = View.INVISIBLE
         iconShowing = false
+        imageButton?.viewTreeObserver?.removeOnGlobalFocusChangeListener(onTvFocusChangeListener)
+        imageButton = null
     }
 
     private fun getIconFallbackImageView(fallbackImg: IconClickFallbackImage): ImageView {
