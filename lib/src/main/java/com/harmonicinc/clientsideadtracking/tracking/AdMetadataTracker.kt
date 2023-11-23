@@ -67,11 +67,11 @@ class AdMetadataTracker(
     }
 
     fun addAdBreakListener(listener: AdBreakListener) {
-        adBreakListeners.add(listener)
+        adBreakListeners.addIfAbsent(listener)
     }
 
     fun addAdProgressListener(listener: AdProgressListener) {
-        adProgressListeners.add(listener)
+        adProgressListeners.addIfAbsent(listener)
     }
 
     fun isPlayingAd(): Boolean {

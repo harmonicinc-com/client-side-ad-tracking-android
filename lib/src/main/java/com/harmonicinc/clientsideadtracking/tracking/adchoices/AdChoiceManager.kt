@@ -20,7 +20,7 @@ import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
 import com.harmonicinc.clientsideadtracking.tracking.model.Ad
 import com.harmonicinc.clientsideadtracking.tracking.model.icon.Attributes
 import com.harmonicinc.clientsideadtracking.tracking.model.icon.iconclicks.IconClickFallbackImage
-
+import com.harmonicinc.clientsideadtracking.tracking.util.AndroidUtils
 
 class AdChoiceManager(
     private val context: Context,
@@ -46,6 +46,10 @@ class AdChoiceManager(
         } ?: run {
             addViewToContainerView(adChoiceView!!, playerView)
         }
+    }
+
+    fun onDestroy() {
+        hideAdChoice()
     }
 
     private fun inflateAdChoiceView(context: Context): RelativeLayout {
@@ -93,6 +97,9 @@ class AdChoiceManager(
 
         imageButton.setOnClickListener {
             try {
+                if (!AndroidUtils.isTelevision(context)) {
+                    throw UnsupportedOperationException("Not running on a TV device")
+                }
                 val fallbackImages = getIconClickFallbackImages(adIcon.iconClicks.iconClickFallbackImages)
                 adsControlsManager.handleIconClick(fallbackImages)
             } catch (e: Exception) {

@@ -112,6 +112,7 @@ class AdTrackingManager(
     fun cleanupAfterStop() {
         trackingOverlay.onDestroy()
         metadataTracker.onStopped()
+        adChoiceManager.onDestroy()
 
         if (ssaiSupported) {
             sendPlaybackEnd()
