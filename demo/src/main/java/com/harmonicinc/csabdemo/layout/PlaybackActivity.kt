@@ -44,12 +44,12 @@ import kotlinx.coroutines.launch
         }.attach()
     }
 
-    override fun onStop() {
+    override fun onDestroy() {
         if (adTrackingManager.isSSAISupported()) {
             adTrackingManager.cleanupAfterStop()
         }
         playerFragment.onPlayerStop()
-        super.onStop()
+        super.onDestroy()
     }
 
     fun onPlayerLoad() {
