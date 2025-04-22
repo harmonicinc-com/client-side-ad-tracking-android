@@ -84,7 +84,10 @@ Android 8.0 (API 26) or above
          continuousPlayback, // Boolean: Will the player continues to play content videos after ad?
          omidPartnerVersion?, // String?: OMID partner version
          omidPartnerName?, // String: OMID partner name
-         omidCustomReferenceData? // String?: OMID custom reference data in JSON string
+         omidCustomReferenceData?, // String?: OMID custom reference data in JSON string
+         
+         // Optional params:
+         initRequest // Boolean: Should a POST request be sent to init the session?
      )
      ```
    - Create a class that implements `PlayerAdapter`. Override all mandatory methods and return appropriate values from your player. The demo project includes an example [ExoPlayerAdapter.kt](demo%2Fsrc%2Fmain%2Fjava%2Fcom%2Fharmonicinc%2Fcsabdemo%2Fplayer%2FExoPlayerAdapter.kt) for your reference.

@@ -67,7 +67,8 @@ import kotlinx.coroutines.launch
             continuousPlayback = false,
             null,
             null,
-            null
+            null,
+            initRequest = true,
         )
 
         mediaFragment.hideKeyboard()
