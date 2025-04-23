@@ -12,6 +12,7 @@ import com.google.android.gms.tasks.Task
 import com.harmonicinc.clientsideadtracking.player.MockPlayerAdapter
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
 import com.harmonicinc.clientsideadtracking.tracking.client.OMSDKClient
+import com.harmonicinc.clientsideadtracking.tracking.model.InitResponse
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_NONCE_QUERY_PARAM_KEY
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
 import io.mockk.MockKAnnotations
@@ -22,6 +23,7 @@ import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -67,7 +69,8 @@ class AdTrackingManagerTest {
         continuousPlayback = false,
         null,
         null,
-        null
+        null,
+        initRequest = false
     )
 
     @Before
@@ -101,6 +104,38 @@ class AdTrackingManagerTest {
 
         val adTrackingManager = AdTrackingManager(activity, nonceLoader, OkHttpService())
         adTrackingManager.prepareBeforeLoad(baseUrl, adTrackingParams)
+        assertTrue(adTrackingManager.isSSAISupported())
+
+        val actualUrls = adTrackingManager.appendNonceToUrl(listOf(baseUrl))
+        assertTrue(actualUrls.isNotEmpty())
+        assertTrue(actualUrls[0].contains("$PAL_NONCE_QUERY_PARAM_KEY=$expectNonce"))
+        assertTrue(actualUrls[0].contains("$SESSION_ID_QUERY_PARAM_KEY=$expectSessId"))
+    }
+
+    @Test
+    fun testInitRequest() = runTest(timeout = 10.seconds) {
+        val expectSessId = "testSessId"
+        val expectNonce = "testNonce"
+        val baseUrl = mockWebServer.url("/master.mpd").toString()
+
+        val testInitResponse = InitResponse(
+            manifestUrl = "/manifest?$SESSION_ID_QUERY_PARAM_KEY=$expectSessId",
+            trackingUrl = "/tracking?$SESSION_ID_QUERY_PARAM_KEY=$expectSessId"
+        )
+
+        val mockResponse = MockResponse()
+            .setResponseCode(HttpURLConnection.HTTP_OK)
+            .setBody(Json.encodeToString(InitResponse.serializer(), testInitResponse))
+        mockWebServer.enqueue(mockResponse)
+        every { nonceManager.nonce } returns expectNonce
+        every { nonceLoader.loadNonceManager(any()) } returns getFakeTask(nonceManager)
+
+        val newAdTrackingParams = adTrackingParams.copy(
+            initRequest = true,
+        )
+
+        val adTrackingManager = AdTrackingManager(activity, nonceLoader, OkHttpService())
+        adTrackingManager.prepareBeforeLoad(baseUrl, newAdTrackingParams)
         assertTrue(adTrackingManager.isSSAISupported())
 
         val actualUrls = adTrackingManager.appendNonceToUrl(listOf(baseUrl))

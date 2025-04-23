@@ -16,5 +16,7 @@ data class AdTrackingManagerParams(
     val omidPartnerVersion: String?,
     val omidPartnerName: String?,
     // Custom reference data in JSON string
-    val omidCustomReferenceData: String?
+    val omidCustomReferenceData: String?,
+    // Optional params
+    val initRequest: Boolean = true
 )

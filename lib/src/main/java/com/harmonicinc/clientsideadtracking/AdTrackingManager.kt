@@ -8,6 +8,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.VisibleForTesting
+import androidx.core.net.toUri
 import com.google.ads.interactivemedia.pal.ConsentSettings
 import com.google.ads.interactivemedia.pal.NonceLoader
 import com.google.ads.interactivemedia.pal.NonceManager
@@ -35,6 +36,8 @@ class AdTrackingManager(
     private var sessionId: String? = null
     private var ssaiSupported = false
     private var manifestUrl: String? = null
+    private var metadataUrl: String? = null
+    private var obtainedQueryParams = mutableMapOf<String, String>()
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     var omsdkClient: OMSDKClient? = null
@@ -67,11 +70,48 @@ class AdTrackingManager(
     suspend fun prepareBeforeLoad(manifestUrl: String, params: AdTrackingManagerParams) {
         this.manifestUrl = manifestUrl
         this.params = params
-        sessionId = okHttpService.getSessionId(manifestUrl)
-        if (sessionId == null) {
-            Log.w(TAG, "Unsupported SSAI stream")
-            return
+
+        if (params.initRequest) {
+            val initResponse = okHttpService.getInitResponse(manifestUrl)
+            if (initResponse != null) {
+                Log.d(TAG, "Obtained URLs from POST init request. manifest: ${initResponse.manifestUrl}, metadata: ${initResponse.trackingUrl}")
+
+                val originalUrl = manifestUrl.toUri()
+                val urlPrefix = "${originalUrl.scheme}://${originalUrl.authority}"
+
+                // The URLs in the init response are expected to be relative to the host.
+                metadataUrl = "${urlPrefix}${initResponse.trackingUrl}"
+
+                val obtainedUrl = initResponse.manifestUrl.toUri()
+                sessionId = obtainedUrl.getQueryParameter(SESSION_ID_QUERY_PARAM_KEY)
+
+                if (sessionId == null) {
+                    Log.w(TAG, "Session ID not found in init response")
+                } else {
+                    Log.d(TAG, "Session ID found in init response: $sessionId")
+                }
+                
+                // There may be other query params in the init response that need to be passed on.
+                obtainedUrl.queryParameterNames.forEach { name ->
+                    // Skip session ID
+                    if (name != SESSION_ID_QUERY_PARAM_KEY) {
+                        obtainedQueryParams[name] = obtainedUrl.getQueryParameter(name) ?: ""
+                    }
+                }
+            } else {
+                Log.w(TAG, "POST init request failed, falling back to GET request")
+            }
         }
+
+        if (metadataUrl == null || sessionId == null) {
+            sessionId = okHttpService.getSessionId(manifestUrl)
+            if (sessionId == null) {
+                Log.w(TAG, "Unsupported SSAI stream")
+                return
+            }
+            metadataUrl = urlFilenameRegex.replace(this.manifestUrl!!, "metadata")
+        }
+
         ssaiSupported = true
 
         // Nonce manager must be initialized before playback
@@ -102,8 +142,11 @@ class AdTrackingManager(
 
         setupListeners()
 
-        val metadataUrl = urlFilenameRegex.replace(this.manifestUrl!!, "metadata")
-        metadataTracker.onPlay(metadataUrl, sessionId!!)
+        if (metadataUrl == null || sessionId == null) {
+            Log.e(TAG, "Metadata URL or Session ID not set. Unable to start metadata tracker.")
+            throw RuntimeException("Metadata URL or Session ID not set. (Did you call prepareBeforeLoad?)")
+        }
+        metadataTracker.onPlay(metadataUrl!!, sessionId!!)
 
         sendPlaybackStart()
         Log.i(TAG, "Ad Tracking manager started")
@@ -123,6 +166,13 @@ class AdTrackingManager(
     fun appendNonceToUrl(urls: List<String>): List<String> {
         return urls.map {
             val builder = Uri.parse(it).buildUpon()
+
+            if (obtainedQueryParams.isNotEmpty()) {
+                obtainedQueryParams.forEach { (key, value) ->
+                    builder.appendQueryParameter(key, value)
+                }
+            }
+
             builder
                 .appendQueryParameter(PAL_NONCE_QUERY_PARAM_KEY, nonceManager.nonce)
                 .appendQueryParameter(SESSION_ID_QUERY_PARAM_KEY, sessionId)
