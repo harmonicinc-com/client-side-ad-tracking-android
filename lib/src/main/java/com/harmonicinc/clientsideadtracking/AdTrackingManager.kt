@@ -146,7 +146,7 @@ class AdTrackingManager(
             Log.e(TAG, "Metadata URL or Session ID not set. Unable to start metadata tracker.")
             throw RuntimeException("Metadata URL or Session ID not set. (Did you call prepareBeforeLoad?)")
         }
-        metadataTracker.onPlay(metadataUrl, sessionId)
+        metadataTracker.onPlay(metadataUrl!!, sessionId!!)
 
         sendPlaybackStart()
         Log.i(TAG, "Ad Tracking manager started")
