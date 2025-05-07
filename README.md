@@ -284,3 +284,31 @@ The following table is a list of API frameworks either supported by a placement 
     <td>Vendor-specific codes.</td>
   </tr>
 </table>
+
+### How the Playback URL and Beaconing URL are Obtained by the Library
+
+> [!NOTE]  
+> Applicable when `initRequest` in `AdTrackingManagerParams` is `true` (default is true).
+
+1. The library sends a POST request to the manifest endpoint. For e.g., a POST request is sent to:
+    ```
+    https://my-host/variant/v1/dash/manifest.mpd
+    ```
+
+2. The ad insertion service (PMM) responds with the URLs. For e.g.,
+    ```
+    {
+        "manifestUrl": "/variant/v1/dash/manifest.mpd?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed",
+        "trackingUrl": "/variant/v1/dash/metadata?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed"
+    }
+    ```
+
+3. The library constructs the URLs by combining the host in the original URL and the relative URLs obtained. For e.g.,
+    ```
+    Manifest URL: https://my-host/variant/v1/dash/manifest.mpd?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed
+
+    Metadata URL: https://my-host/variant/v1/dash/metadata?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed
+    ```
+
+> [!NOTE]  
+> When `appendNonceToUrl` is called, the resulting URL will be constructed using the URL obtained above.
