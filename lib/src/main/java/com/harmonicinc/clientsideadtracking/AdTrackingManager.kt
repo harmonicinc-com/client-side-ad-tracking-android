@@ -25,6 +25,7 @@ import com.harmonicinc.clientsideadtracking.tracking.util.Constants
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_NONCE_QUERY_PARAM_KEY
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
 import com.iab.omid.library.harmonicinc.Omid
+import java.net.URL
 import kotlinx.coroutines.tasks.await
 
 class AdTrackingManager(
@@ -72,31 +73,42 @@ class AdTrackingManager(
         this.params = params
 
         if (params.initRequest) {
+            val baseUri = URL(manifestUrl)
             val initResponse = okHttpService.getInitResponse(manifestUrl)
             if (initResponse != null) {
                 Log.d(TAG, "Obtained URLs from POST init request. manifest: ${initResponse.manifestUrl}, metadata: ${initResponse.trackingUrl}")
 
-                val originalUrl = manifestUrl.toUri()
-                val urlPrefix = "${originalUrl.scheme}://${originalUrl.authority}"
+                try {
+                    val resolvedMetadataUrl = URL(baseUri, initResponse.trackingUrl)
+                    metadataUrl = resolvedMetadataUrl.toString()
+                } catch (e: java.net.URISyntaxException) {
+                    Log.e(TAG, "Error constructing metadataUrl from originalUrl '$manifestUrl' and trackingUrl in initResponse '${initResponse.trackingUrl}': ${e.message}")
+                }
 
-                // The URLs in the init response are expected to be relative to the host.
-                metadataUrl = "${urlPrefix}${initResponse.trackingUrl}"
+                val obtainedUrl: Uri?
+                try {
+                    val resolvedManifestUrl = URL(baseUri, initResponse.manifestUrl)
+                    obtainedUrl = resolvedManifestUrl.toString().toUri()
 
-                val obtainedUrl = initResponse.manifestUrl.toUri()
-                sessionId = obtainedUrl.getQueryParameter(SESSION_ID_QUERY_PARAM_KEY)
+                    sessionId = obtainedUrl.getQueryParameter(SESSION_ID_QUERY_PARAM_KEY)
+
+                    // There may be other query params in the init response that need to be passed on.
+                    obtainedUrl.queryParameterNames.forEach { name ->
+                        // Skip session ID
+                        if (name != SESSION_ID_QUERY_PARAM_KEY) {
+                            obtainedQueryParams[name] = obtainedUrl.getQueryParameter(name) ?: ""
+                        }
+                    }
+
+                    this.manifestUrl = obtainedUrl.toString()
+                } catch (e: java.net.URISyntaxException) {
+                    Log.e(TAG, "Error constructing manifestUrl from originalUrl '$manifestUrl' and manifestUrl in initResponse '${initResponse.manifestUrl}': ${e.message}")
+                }
 
                 if (sessionId == null) {
                     Log.w(TAG, "Session ID not found in init response")
                 } else {
                     Log.d(TAG, "Session ID found in init response: $sessionId")
-                }
-                
-                // There may be other query params in the init response that need to be passed on.
-                obtainedUrl.queryParameterNames.forEach { name ->
-                    // Skip session ID
-                    if (name != SESSION_ID_QUERY_PARAM_KEY) {
-                        obtainedQueryParams[name] = obtainedUrl.getQueryParameter(name) ?: ""
-                    }
                 }
             } else {
                 Log.w(TAG, "POST init request failed, falling back to GET request")
@@ -183,6 +195,10 @@ class AdTrackingManager(
 
     fun isSSAISupported(): Boolean {
         return ssaiSupported
+    }
+
+    fun getObtainedManifestUrl(): String? {
+        return manifestUrl
     }
 
     fun showTrackingOverlay(state: Boolean) {

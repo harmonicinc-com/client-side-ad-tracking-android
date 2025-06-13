@@ -80,6 +80,9 @@ import kotlinx.coroutines.launch
             if (newUrl != null) {
                 adTrackingManager.prepareBeforeLoad(newUrl, adTrackingParams)
                 if (adTrackingManager.isSSAISupported()) {
+                    if (adTrackingManager.getObtainedManifestUrl() != null) {
+                        newUrl = adTrackingManager.getObtainedManifestUrl()!!
+                    }
                     newUrl = adTrackingManager.appendNonceToUrl(listOf(newUrl))[0]
 
                     adTrackingManager.onPlay(

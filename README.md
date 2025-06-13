@@ -149,6 +149,13 @@ Android 8.0 (API 26) or above
      ```kotlin
      val isSSAISupported = adTrackingManager.isSSAISupported()
      ```
+   - Check if a new URL is obtained by the library. If that is the case, use that URL for your playback.
+     ```kotlin
+     var updatedManifestUrl = manifestUrl
+     if (adTrackingManager.getObtainedManifestUrl() != null) {
+        updatedManifestUrl = adTrackingManager.getObtainedManifestUrl()
+     }
+     ```
    - To obtain the generated nonce, call `appendNonceToUrl`
      ```kotlin
      val manifestUrls = listOf("https://www.example.com")
@@ -298,8 +305,8 @@ The following table is a list of API frameworks either supported by a placement 
 2. The ad insertion service (PMM) responds with the URLs. For e.g.,
     ```
     {
-        "manifestUrl": "/variant/v1/dash/manifest.mpd?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed",
-        "trackingUrl": "/variant/v1/dash/metadata?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed"
+        "manifestUrl": "./manifest.mpd?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed",
+        "trackingUrl": "./metadata?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed"
     }
     ```
 
