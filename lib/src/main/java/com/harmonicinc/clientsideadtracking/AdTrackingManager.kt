@@ -81,7 +81,7 @@ class AdTrackingManager(
                 try {
                     val resolvedMetadataUrl = URL(baseUri, initResponse.trackingUrl)
                     metadataUrl = resolvedMetadataUrl.toString()
-                } catch (e: java.net.MalformedURLException) {
+                } catch (e: Exception) {
                     Log.e(TAG, "Error constructing metadataUrl from originalUrl '$manifestUrl' and trackingUrl in initResponse '${initResponse.trackingUrl}': ${e.message}")
                 }
 
@@ -101,7 +101,7 @@ class AdTrackingManager(
                     }
 
                     this.manifestUrl = obtainedUrl.toString()
-                } catch (e: java.net.URISyntaxException) {
+                } catch (e: Exception) {
                     Log.e(TAG, "Error constructing manifestUrl from originalUrl '$manifestUrl' and manifestUrl in initResponse '${initResponse.manifestUrl}': ${e.message}")
                 }
 
