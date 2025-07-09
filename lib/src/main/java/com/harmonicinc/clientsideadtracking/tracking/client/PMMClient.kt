@@ -22,12 +22,12 @@ import kotlinx.coroutines.withContext
 class PMMClient(
     private val tracker: AdMetadataTracker,
     private val okHttpService: OkHttpService,
-    private val context: Context
+    private val context: Context,
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
     private val TAG: String = "PMMClient"
     private var eventLogListener: EventLogListener? = null
-    private val coroutineScope = CoroutineScope(Dispatchers.Main)
-    
+
     private var currentAdBreak: AdBreak? = null
     private var currentAd: Ad? = null
 

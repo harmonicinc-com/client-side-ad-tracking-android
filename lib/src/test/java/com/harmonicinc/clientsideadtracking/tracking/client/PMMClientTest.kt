@@ -64,7 +64,7 @@ class PMMClientTest {
         coEvery { okHttpService.getString(any()) } returns ""
         
         // Create PMMClient
-        val client = PMMClient(tracker, okHttpService, context)
+        val client = PMMClient(tracker, okHttpService, context, this)
         client.setListener(mockEventLogListener)
         
         // Verify listener was registered
@@ -118,7 +118,7 @@ class PMMClientTest {
         coEvery { okHttpService.getString(any()) } returns ""
 
         // Create PMMClient
-        val client = PMMClient(tracker, okHttpService, context)
+        val client = PMMClient(tracker, okHttpService, context, this)
         client.setListener(mockEventLogListener)
 
         // Load mock metadata
@@ -173,7 +173,7 @@ class PMMClientTest {
         coEvery { okHttpService.getString(any()) } throws Exception("Network error")
 
         // Create PMMClient
-        val client = PMMClient(tracker, okHttpService, context)
+        val client = PMMClient(tracker, okHttpService, context, this)
         client.setListener(mockEventLogListener)
 
         // Test that beacon failure doesn't crash the app
