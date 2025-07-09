@@ -2,7 +2,6 @@ package com.harmonicinc.clientsideadtracking.tracking.client
 
 import android.content.Context
 import android.content.Intent
-import android.os.Looper
 import com.harmonicinc.clientsideadtracking.OkHttpService
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
 import com.harmonicinc.clientsideadtracking.tracking.AdProgressListener
@@ -29,7 +28,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
-import org.robolectric.Shadows.shadowOf
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -88,8 +86,7 @@ class PMMClientTest {
         
         // Give coroutines time to complete
         runCurrent()
-        shadowOf(Looper.getMainLooper()).idle()
-        
+
         // Verify beacon was sent
         coVerify { okHttpService.getString(impressionTracking.url[0]) }
         
@@ -150,7 +147,6 @@ class PMMClientTest {
 
         // Give coroutines time to complete
         runCurrent()
-        shadowOf(Looper.getMainLooper()).idle()
 
         // Verify all beacons were sent
         trackingEvents.forEach { eventType ->
@@ -182,7 +178,6 @@ class PMMClientTest {
 
         // Give coroutines time to complete
         runCurrent()
-        shadowOf(Looper.getMainLooper()).idle()
 
         // Verify beacon attempt was made
         coVerify { okHttpService.getString(testUrl) }
