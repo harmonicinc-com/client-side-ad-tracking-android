@@ -12,6 +12,7 @@ import com.harmonicinc.clientsideadtracking.tracking.model.AdBreak
 import com.harmonicinc.clientsideadtracking.tracking.model.EventLog
 import com.harmonicinc.clientsideadtracking.tracking.model.Tracking
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.CSAT_INTENT_LOG_ACTION
+import com.harmonicinc.clientsideadtracking.tracking.util.Constants.EXTRA_MESSAGE_KEY
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -71,6 +72,7 @@ class PMMClient(
                         Tracking.Event.COMPLETE -> complete(event.url)
                         else -> {}
                     }
+                    event.fired = true
                 } else {
                     Log.d(TAG, "onAdProgress: skipping beacon - currentAd=${currentAd?.id}, urlEmpty=${event.url.isEmpty()}, fired=${event.fired}")
                 }
@@ -92,49 +94,38 @@ class PMMClient(
         eventLogListener?.onEvent(eventLog)
         
         val intent = Intent(CSAT_INTENT_LOG_ACTION)
-        intent.putExtra("message", "[${eventLog.clientTag}] ${eventLog.adBreakId} > ${eventLog.adId} > ${eventLog.event.name}")
+        intent.putExtra(EXTRA_MESSAGE_KEY, "[${eventLog.clientTag}] ${eventLog.adBreakId} > ${eventLog.adId} > ${eventLog.event.name}")
         context.sendBroadcast(intent)
     }
 
-    fun start(urls: List<String>) {
+    private fun sendBeaconAndLog(urls: List<String>, event: Tracking.Event) {
         coroutineScope.launch {
-            sendBeacon(urls, Tracking.Event.START)
+            sendBeacon(urls, event)
         }
-        pushEventLog(Tracking.Event.START)
+        pushEventLog(event)
+    }
+
+    fun start(urls: List<String>) {
+        sendBeaconAndLog(urls, Tracking.Event.START)
     }
 
     fun impressionOccurred(urls: List<String>) {
-        coroutineScope.launch {
-            sendBeacon(urls, Tracking.Event.IMPRESSION)
-        }
-        pushEventLog(Tracking.Event.IMPRESSION)
+        sendBeaconAndLog(urls, Tracking.Event.IMPRESSION)
     }
 
     fun firstQuartile(urls: List<String>) {
-        coroutineScope.launch {
-            sendBeacon(urls, Tracking.Event.FIRST_QUARTILE)
-        }
-        pushEventLog(Tracking.Event.FIRST_QUARTILE)
+        sendBeaconAndLog(urls, Tracking.Event.FIRST_QUARTILE)
     }
 
     fun midpoint(urls: List<String>) {
-        coroutineScope.launch {
-            sendBeacon(urls, Tracking.Event.MIDPOINT)
-        }
-        pushEventLog(Tracking.Event.MIDPOINT)
+        sendBeaconAndLog(urls, Tracking.Event.MIDPOINT)
     }
 
     fun thirdQuartile(urls: List<String>) {
-        coroutineScope.launch {
-            sendBeacon(urls, Tracking.Event.THIRD_QUARTILE)
-        }
-        pushEventLog(Tracking.Event.THIRD_QUARTILE)
+        sendBeaconAndLog(urls, Tracking.Event.THIRD_QUARTILE)
     }
 
     fun complete(urls: List<String>) {
-        coroutineScope.launch {
-            sendBeacon(urls, Tracking.Event.COMPLETE)
-        }
-        pushEventLog(Tracking.Event.COMPLETE)
+        sendBeaconAndLog(urls, Tracking.Event.COMPLETE)
     }
 }
