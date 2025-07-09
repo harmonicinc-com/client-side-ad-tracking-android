@@ -146,7 +146,7 @@ class AdTrackingManager(
         this.playerAdapter = playerAdapter
         metadataTracker = AdMetadataTracker(playerAdapter, okHttpService)
         omsdkClient = OMSDKClient(context, playerAdapter, playerView, metadataTracker, params.omidCustomReferenceData)
-        pmmClient = PMMClient(playerAdapter, metadataTracker)
+        pmmClient = PMMClient(metadataTracker, okHttpService, context)
         trackingOverlay = TrackingOverlay(context, playerAdapter, overlayViewContainer, playerView, metadataTracker, omsdkClient, pmmClient)
         adChoiceManager = AdChoiceManager(context, overlayViewContainer, playerView, metadataTracker)
 

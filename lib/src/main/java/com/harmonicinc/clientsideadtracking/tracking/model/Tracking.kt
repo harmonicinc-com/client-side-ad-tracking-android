@@ -33,7 +33,7 @@ class Tracking(
 
     fun parse(json: JSONObject) {
         this.event = this.eventMap(json.optString("event"))
-        this.url = json.optJSONArray("signalingUrls")?.toList() as List<String>? ?: listOf()
+        this.url = json.optJSONArray("signalingUrls")?.toList()?.filterIsInstance<String>() ?: listOf()
         this.startTime = json.optLong("startTime")
     }
 

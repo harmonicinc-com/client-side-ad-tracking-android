@@ -1,63 +1,140 @@
 package com.harmonicinc.clientsideadtracking.tracking.client
 
-import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
+import android.content.Context
+import android.content.Intent
+import android.util.Log
+import com.harmonicinc.clientsideadtracking.OkHttpService
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
+import com.harmonicinc.clientsideadtracking.tracking.AdProgressListener
 import com.harmonicinc.clientsideadtracking.tracking.EventLogListener
+import com.harmonicinc.clientsideadtracking.tracking.model.Ad
+import com.harmonicinc.clientsideadtracking.tracking.model.AdBreak
+import com.harmonicinc.clientsideadtracking.tracking.model.EventLog
+import com.harmonicinc.clientsideadtracking.tracking.model.Tracking
+import com.harmonicinc.clientsideadtracking.tracking.util.Constants.CSAT_INTENT_LOG_ACTION
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-// Currently unused. Reserved for future implementations
-class PMMClient(playerAdapter: PlayerAdapter, private val tracker: AdMetadataTracker) {
+// PMM Client for sending HTTP beacons based on tracking events
+class PMMClient(
+    private val tracker: AdMetadataTracker,
+    private val okHttpService: OkHttpService,
+    private val context: Context
+) {
     private val TAG: String = "PMMClient"
     private var eventLogListener: EventLogListener? = null
+    private val coroutineScope = CoroutineScope(Dispatchers.Main)
+    
+    private var currentAdBreak: AdBreak? = null
+    private var currentAd: Ad? = null
+
+    init {
+        initHandlers()
+    }
 
     fun setListener(listener: EventLogListener) {
         eventLogListener = listener
     }
 
-    fun start(url: String) {
-        TODO("Not yet implemented")
+    private suspend fun sendBeacon(urls: List<String>, event: Tracking.Event) {
+        Log.d(TAG, "sendBeacon: sending ${urls.size} beacons for ${event.name}")
+        withContext(Dispatchers.IO) {
+            urls.forEach { url ->
+                try {
+                    Log.d(TAG, "sendBeacon: sending beacon to $url")
+                    okHttpService.getString(url)
+                    Log.d(TAG, "Beacon sent successfully for ${event.name}: $url")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to send beacon for ${event.name}: $url", e)
+                }
+            }
+        }
     }
 
-    fun impressionOccurred(url: String) {
-        TODO("Not yet implemented")
+    private fun initHandlers() {
+        tracker.addAdProgressListener(object : AdProgressListener {
+            override fun onAdProgress(currentAdBreak: AdBreak?, currentAd: Ad?, event: Tracking) {
+                this@PMMClient.currentAdBreak = currentAdBreak
+                this@PMMClient.currentAd = currentAd
+                
+                Log.d(TAG, "onAdProgress: currentAd=${currentAd?.id}, event=${event.event}, url=${event.url}, fired=${event.fired}")
+                
+                if (currentAd != null && event.url.isNotEmpty() && !event.fired) {
+                    when (event.event) {
+                        Tracking.Event.IMPRESSION -> impressionOccurred(event.url)
+                        Tracking.Event.START -> start(event.url)
+                        Tracking.Event.FIRST_QUARTILE -> firstQuartile(event.url)
+                        Tracking.Event.MIDPOINT -> midpoint(event.url)
+                        Tracking.Event.THIRD_QUARTILE -> thirdQuartile(event.url)
+                        Tracking.Event.COMPLETE -> complete(event.url)
+                        else -> {}
+                    }
+                } else {
+                    Log.d(TAG, "onAdProgress: skipping beacon - currentAd=${currentAd?.id}, urlEmpty=${event.url.isEmpty()}, fired=${event.fired}")
+                }
+            }
+        })
     }
 
-    fun firstQuartile(url: String) {
-        TODO("Not yet implemented")
+    private fun pushEventLog(event: Tracking.Event) {
+        val adBreakId = currentAdBreak?.id ?: ""
+        val adId = currentAd?.id ?: ""
+        val eventLog = EventLog(
+            "PMM",
+            adBreakId,
+            adId,
+            System.currentTimeMillis(),
+            event
+        )
+        
+        eventLogListener?.onEvent(eventLog)
+        
+        val intent = Intent(CSAT_INTENT_LOG_ACTION)
+        intent.putExtra("message", "[${eventLog.clientTag}] ${eventLog.adBreakId} > ${eventLog.adId} > ${eventLog.event.name}")
+        context.sendBroadcast(intent)
     }
 
-    fun midpoint(url: String) {
-        TODO("Not yet implemented")
+    fun start(urls: List<String>) {
+        coroutineScope.launch {
+            sendBeacon(urls, Tracking.Event.START)
+        }
+        pushEventLog(Tracking.Event.START)
     }
 
-    fun thirdQuartile(url: String) {
-        TODO("Not yet implemented")
+    fun impressionOccurred(urls: List<String>) {
+        coroutineScope.launch {
+            sendBeacon(urls, Tracking.Event.IMPRESSION)
+        }
+        pushEventLog(Tracking.Event.IMPRESSION)
     }
 
-    fun complete(url: String) {
-        TODO("Not yet implemented")
+    fun firstQuartile(urls: List<String>) {
+        coroutineScope.launch {
+            sendBeacon(urls, Tracking.Event.FIRST_QUARTILE)
+        }
+        pushEventLog(Tracking.Event.FIRST_QUARTILE)
     }
 
-    fun pause(url: String) {
-        TODO("Not yet implemented")
+    fun midpoint(urls: List<String>) {
+        coroutineScope.launch {
+            sendBeacon(urls, Tracking.Event.MIDPOINT)
+        }
+        pushEventLog(Tracking.Event.MIDPOINT)
     }
 
-    fun resume(url: String) {
-        TODO("Not yet implemented")
+    fun thirdQuartile(urls: List<String>) {
+        coroutineScope.launch {
+            sendBeacon(urls, Tracking.Event.THIRD_QUARTILE)
+        }
+        pushEventLog(Tracking.Event.THIRD_QUARTILE)
     }
 
-    fun bufferStart(url: String) {
-        TODO("Not yet implemented")
-    }
-
-    fun bufferEnd(url: String) {
-        TODO("Not yet implemented")
-    }
-
-    fun volumeChange(url: String) {
-        TODO("Not yet implemented")
-    }
-
-    fun isPlayingAd(url: String): Boolean {
-        TODO("Not yet implemented")
+    fun complete(urls: List<String>) {
+        coroutineScope.launch {
+            sendBeacon(urls, Tracking.Event.COMPLETE)
+        }
+        pushEventLog(Tracking.Event.COMPLETE)
     }
 }
