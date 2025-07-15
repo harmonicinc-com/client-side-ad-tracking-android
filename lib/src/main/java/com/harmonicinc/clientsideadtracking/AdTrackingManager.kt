@@ -76,7 +76,7 @@ class AdTrackingManager(
             val baseUri = URL(manifestUrl)
             val initResponse = okHttpService.getInitResponse(manifestUrl)
             if (initResponse != null) {
-                Log.d(TAG, "Obtained URLs from POST init request. manifest: ${initResponse.manifestUrl}, metadata: ${initResponse.trackingUrl}")
+                Log.d(TAG, "Obtained URLs from init request API. manifest: ${initResponse.manifestUrl}, metadata: ${initResponse.trackingUrl}")
 
                 try {
                     val resolvedMetadataUrl = URL(baseUri, initResponse.trackingUrl)
@@ -111,12 +111,20 @@ class AdTrackingManager(
                     Log.d(TAG, "Session ID found in init response: $sessionId")
                 }
             } else {
-                Log.w(TAG, "POST init request failed, falling back to GET request")
+                Log.w(TAG, "init request failed, falling back to redirect/parsing manifest")
             }
         }
 
         if (metadataUrl == null || sessionId == null) {
-            sessionId = okHttpService.getSessionId(manifestUrl)
+            val result = okHttpService.getSessionIdAndUrl(manifestUrl)
+            if (result != null) {
+                sessionId = result.sessionId
+                Log.d(TAG, "Session ID found in manifest: $sessionId")
+                if (result.resolvedUrl != null) {
+                    this.manifestUrl = result.resolvedUrl
+                    Log.d(TAG, "Resolved manifest URL: ${this.manifestUrl}")
+                }
+            }
             if (sessionId == null) {
                 Log.w(TAG, "Unsupported SSAI stream")
                 return
