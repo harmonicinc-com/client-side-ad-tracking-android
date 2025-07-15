@@ -20,7 +20,7 @@ import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -85,7 +85,7 @@ class PMMClientTest {
         )
         
         // Give coroutines time to complete
-        runCurrent()
+        advanceUntilIdle()
 
         // Verify beacon was sent
         coVerify { okHttpService.getString(impressionTracking.url[0]) }
@@ -146,7 +146,7 @@ class PMMClientTest {
         }
 
         // Give coroutines time to complete
-        runCurrent()
+        advanceUntilIdle()
 
         // Verify all beacons were sent
         trackingEvents.forEach { eventType ->
@@ -177,7 +177,7 @@ class PMMClientTest {
         client.impressionOccurred(listOf(testUrl))
 
         // Give coroutines time to complete
-        runCurrent()
+        advanceUntilIdle()
 
         // Verify beacon attempt was made
         coVerify { okHttpService.getString(testUrl) }
