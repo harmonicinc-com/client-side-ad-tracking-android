@@ -111,7 +111,7 @@ class AdTrackingManager(
                     Log.d(TAG, "Session ID found in init response: $sessionId")
                 }
             } else {
-                Log.w(TAG, "init request failed, falling back to redirect/parsing manifest")
+                Log.w(TAG, "Init request failed, falling back to redirect/parsing manifest")
             }
         }
 
