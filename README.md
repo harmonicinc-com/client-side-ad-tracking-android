@@ -87,7 +87,7 @@ Android 8.0 (API 26) or above
          omidCustomReferenceData?, // String?: OMID custom reference data in JSON string
          
          // Optional params:
-         initRequest // Boolean: Should a POST request be sent to init the session?
+         initRequest // Boolean: Should the session init API be used?
      )
      ```
    - Create a class that implements `PlayerAdapter`. Override all mandatory methods and return appropriate values from your player. The demo project includes an example [ExoPlayerAdapter.kt](demo%2Fsrc%2Fmain%2Fjava%2Fcom%2Fharmonicinc%2Fcsabdemo%2Fplayer%2FExoPlayerAdapter.kt) for your reference.
@@ -297,24 +297,24 @@ The following table is a list of API frameworks either supported by a placement 
 > [!NOTE]  
 > Applicable when `initRequest` in `AdTrackingManagerParams` is `true` (default is true).
 
-1. The library sends a POST request to the manifest endpoint. For e.g., a POST request is sent to:
+1. The library sends a request to the manifest endpoint with the query param "initSession=true". For e.g., a GET request is sent to:
     ```
-    https://my-host/variant/v1/dash/manifest.mpd
+    https://my-host/variant/v1/dash/manifest.mpd?initSession=true
     ```
 
 2. The ad insertion service (PMM) responds with the URLs. For e.g.,
     ```
     {
-        "manifestUrl": "./manifest.mpd?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed",
-        "trackingUrl": "./metadata?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed"
+        "manifestUrl": "./manifest.mpd?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed&vosad_inst_id=pmm-0",
+        "trackingUrl": "./metadata?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed&vosad_inst_id=pmm-0"
     }
     ```
 
 3. The library constructs the URLs by combining the host in the original URL and the relative URLs obtained. For e.g.,
     ```
-    Manifest URL: https://my-host/variant/v1/dash/manifest.mpd?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed
+    Manifest URL: https://my-host/variant/v1/dash/manifest.mpd?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed&vosad_inst_id=pmm-0
 
-    Metadata URL: https://my-host/variant/v1/dash/metadata?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed
+    Metadata URL: https://my-host/variant/v1/dash/metadata?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed&vosad_inst_id=pmm-0
     ```
 
 > [!NOTE]  
