@@ -69,6 +69,7 @@ class AdTrackingManager(
     )
 
     suspend fun prepareBeforeLoad(manifestUrl: String, params: AdTrackingManagerParams) {
+        Log.d(TAG, "Preparing AdTrackingManager with manifestUrl: $manifestUrl")
         this.manifestUrl = manifestUrl
         this.params = params
 
@@ -141,11 +142,11 @@ class AdTrackingManager(
     fun onPlay(
         context: Context,
         playerAdapter: PlayerAdapter,
-        overlayViewContainer: ViewGroup?,
-        playerView: ViewGroup
+        overlayViewContainer: ViewGroup? = null,
+        playerView: ViewGroup? = null
     ) {
         if (manifestUrl == null) {
-            Log.e(TAG, "Manifest URL not set. Unable to start metadata tracker & overlay")
+            Log.e(TAG, "Manifest URL not set. Unable to start metadata tracker")
             throw RuntimeException("Manifest URL not set. (Did you call prepareBeforeLoad?)")
         }
 
@@ -153,12 +154,22 @@ class AdTrackingManager(
         // Init tracking client
         this.playerAdapter = playerAdapter
         metadataTracker = AdMetadataTracker(playerAdapter, okHttpService)
-        omsdkClient = OMSDKClient(context, playerAdapter, playerView, metadataTracker, params.omidCustomReferenceData)
+        
+        // Always initialize PMMClient for beacon tracking
         pmmClient = PMMClient(metadataTracker, okHttpService, context)
-        trackingOverlay = TrackingOverlay(context, playerAdapter, overlayViewContainer, playerView, metadataTracker, omsdkClient, pmmClient)
-        adChoiceManager = AdChoiceManager(context, overlayViewContainer, playerView, metadataTracker)
-
-        trackingOverlay.showOverlay = showOverlay
+        
+        // Only initialize view-dependent components if playerView is provided
+        if (playerView != null) {
+            Log.d(TAG, "PlayerView provided, initializing full tracking components")
+            omsdkClient = OMSDKClient(context, playerAdapter, playerView, metadataTracker, params.omidCustomReferenceData)
+            trackingOverlay = TrackingOverlay(context, playerAdapter, overlayViewContainer, playerView, metadataTracker, omsdkClient, pmmClient)
+            adChoiceManager = AdChoiceManager(context, overlayViewContainer, playerView, metadataTracker)
+            
+            trackingOverlay.showOverlay = showOverlay
+        } else {
+            Log.d(TAG, "PlayerView not provided, using PMM beacon tracking only")
+            omsdkClient = null
+        }
 
         setupListeners()
 
@@ -173,9 +184,13 @@ class AdTrackingManager(
     }
 
     fun cleanupAfterStop() {
-        trackingOverlay.onDestroy()
+        if (::trackingOverlay.isInitialized) {
+            trackingOverlay.onDestroy()
+        }
         metadataTracker.onStopped()
-        adChoiceManager.onDestroy()
+        if (::adChoiceManager.isInitialized) {
+            adChoiceManager.onDestroy()
+        }
 
         if (ssaiSupported) {
             sendPlaybackEnd()
@@ -206,6 +221,7 @@ class AdTrackingManager(
     }
 
     fun getObtainedManifestUrl(): String? {
+        Log.d(TAG, "Obtained manifest URL: $manifestUrl")
         return manifestUrl
     }
 

@@ -55,6 +55,7 @@ class AdMetadataTracker(
 
     // Should only be triggered once after user attempts to play an asset
     fun onPlay(metadataUrl: String, sessionId: String) {
+        Log.d(TAG, "onPlay: metadataUrl=$metadataUrl, sessionId=$sessionId")
         startMetadataUpdateJob(metadataUrl, sessionId)
         postProgress()
     }

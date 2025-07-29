@@ -20,7 +20,8 @@ import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -50,6 +51,9 @@ class PMMClientTest {
 
     @Test
     fun testBeaconSendingWithAdProgress() = runTest(timeout = 10.seconds) {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+        
         val adProgressListenerSlot = slot<AdProgressListener>()
         val eventLogSlot = slot<EventLog>()
         val intentSlot = slot<Intent>()
@@ -62,7 +66,13 @@ class PMMClientTest {
         coEvery { okHttpService.getString(any()) } returns ""
         
         // Create PMMClient
-        val client = PMMClient(tracker, okHttpService, context, this)
+        val client = PMMClient(
+            tracker = tracker,
+            okHttpService = okHttpService,
+            context = context,
+            coroutineScope = testScope,
+            ioDispatcher = testDispatcher
+        )
         client.setListener(mockEventLogListener)
         
         // Verify listener was registered
@@ -84,8 +94,8 @@ class PMMClientTest {
             impressionTracking
         )
         
-        // Give coroutines time to complete
-        advanceUntilIdle()
+        // Advance test scheduler to execute all pending coroutines
+        testScheduler.advanceUntilIdle()
 
         // Verify beacon was sent
         coVerify { okHttpService.getString(impressionTracking.url[0]) }
@@ -104,6 +114,9 @@ class PMMClientTest {
 
     @Test
     fun testMultipleTrackingEvents() = runTest(timeout = 10.seconds) {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+        
         val adProgressListenerSlot = slot<AdProgressListener>()
         val eventLogSlot = slot<EventLog>()
         val mockEventLogListener = mockk<EventLogListener>()
@@ -115,7 +128,13 @@ class PMMClientTest {
         coEvery { okHttpService.getString(any()) } returns ""
 
         // Create PMMClient
-        val client = PMMClient(tracker, okHttpService, context, this)
+        val client = PMMClient(
+            tracker = tracker,
+            okHttpService = okHttpService,
+            context = context,
+            coroutineScope = testScope,
+            ioDispatcher = testDispatcher
+        )
         client.setListener(mockEventLogListener)
 
         // Load mock metadata
@@ -145,8 +164,8 @@ class PMMClientTest {
             )
         }
 
-        // Give coroutines time to complete
-        advanceUntilIdle()
+        // Advance test scheduler to execute all pending coroutines
+        testScheduler.advanceUntilIdle()
 
         // Verify all beacons were sent
         trackingEvents.forEach { eventType ->
@@ -160,6 +179,9 @@ class PMMClientTest {
 
     @Test
     fun testBeaconFailureHandling() = runTest(timeout = 10.seconds) {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+        
         val mockEventLogListener = mockk<EventLogListener>()
 
         // Set up mocks - simulate network failure
@@ -169,15 +191,21 @@ class PMMClientTest {
         coEvery { okHttpService.getString(any()) } throws Exception("Network error")
 
         // Create PMMClient
-        val client = PMMClient(tracker, okHttpService, context, this)
+        val client = PMMClient(
+            tracker = tracker,
+            okHttpService = okHttpService,
+            context = context,
+            coroutineScope = testScope,
+            ioDispatcher = testDispatcher
+        )
         client.setListener(mockEventLogListener)
 
         // Test that beacon failure doesn't crash the app
         val testUrl = "https://example.com/beacon"
         client.impressionOccurred(listOf(testUrl))
 
-        // Give coroutines time to complete
-        advanceUntilIdle()
+        // Advance test scheduler to execute all pending coroutines
+        testScheduler.advanceUntilIdle()
 
         // Verify beacon attempt was made
         coVerify { okHttpService.getString(testUrl) }
