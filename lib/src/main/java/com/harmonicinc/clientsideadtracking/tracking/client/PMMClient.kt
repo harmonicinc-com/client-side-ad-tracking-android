@@ -13,6 +13,7 @@ import com.harmonicinc.clientsideadtracking.tracking.model.EventLog
 import com.harmonicinc.clientsideadtracking.tracking.model.Tracking
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.CSAT_INTENT_LOG_ACTION
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.EXTRA_MESSAGE_KEY
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -23,7 +24,8 @@ class PMMClient(
     private val tracker: AdMetadataTracker,
     private val okHttpService: OkHttpService,
     private val context: Context,
-    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private val TAG: String = "PMMClient"
     private var eventLogListener: EventLogListener? = null
@@ -41,7 +43,7 @@ class PMMClient(
 
     private suspend fun sendBeacon(urls: List<String>, event: Tracking.Event) {
         Log.d(TAG, "sendBeacon: sending ${urls.size} beacons for ${event.name}")
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             urls.forEach { url ->
                 try {
                     Log.d(TAG, "sendBeacon: sending beacon to $url")

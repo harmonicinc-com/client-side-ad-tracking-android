@@ -9,6 +9,7 @@ A library for sending ad beacons on Android devices. Library is currently integr
 - [x] Google AdChoices (Why this ad?)
 - [x] Android TV ads library (AT&C rendering)
 - [x] An overlay showing ad break parameters (ID, duration, fired beacons)
+- [x] Flexible integration: supports both full tracking (with views) and beacon-only tracking (headless)
 
 ## Requirements
 Android 8.0 (API 26) or above
@@ -151,7 +152,7 @@ Android 8.0 (API 26) or above
      ```
    - Check if a new URL is obtained by the library. If that is the case, use that URL for your playback.
      ```kotlin
-     var updatedManifestUrl = manifestUrl
+     val updatedManifestUrl = manifestUrl
      if (adTrackingManager.getObtainedManifestUrl() != null) {
         updatedManifestUrl = adTrackingManager.getObtainedManifestUrl()
      }
@@ -161,15 +162,29 @@ Android 8.0 (API 26) or above
      val manifestUrls = listOf("https://www.example.com")
      val urlsWithNonce = adTrackingManager.appendNonceToUrl(manifestUrls)
      ```
-   - Finally, call `onPlay` to start the library
+   - Finally, call `onPlay` to start the library. There are two usage scenarios:
+
+     **Full Tracking (with views)** - Enables OMSDK verification, overlays, and ad choices:
      ```kotlin
      adTrackingManager.onPlay(
-        playerContext, // context in your player view
+        playerContext, // context in your player view (typically Activity or Fragment context)
         playerAdapter, // adapter created above
-        overlayFrameLayout?, // Optional. A frame layout for showing overlays (e.g. WTA icon, tracking debug overlay)
-        playerView // Your player view. Fallback to this if no overlay frame layout is provided
+        overlayFrameLayout, // Optional. A frame layout for showing overlays (e.g. WTA icon, tracking debug overlay)
+        playerView // Your player view. Required for OMSDK verification and viewability measurement
      )
      ```
+
+     **Beacon-Only Tracking (without views)** - Only PMM beacon tracking, useful for headless scenarios:
+     ```kotlin
+     adTrackingManager.onPlay(
+        context, // Android context (Activity, Service, or Application context)
+        playerAdapter // adapter created above
+        // overlayFrameLayout and playerView are optional - omit them for beacon-only tracking
+     )
+     ```
+
+     > [!NOTE]  
+     > When `playerView` is not provided, only PMM beacon tracking will be active. OMSDK verification, tracking overlays, and ad choices will be disabled since they require view access for viewability measurement.
 6. Stop the library after playback 
    - Remember to clean the library after unloading the asset. Otherwise it will keep querying ads metadata.
      ```kotlin
