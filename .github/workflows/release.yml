@@ -37,10 +37,13 @@ jobs:
       run: ./gradlew :lib:assembleRelease
 
     - name: Upload AAR to Release
-      uses: softprops/action-gh-release@v2
+      uses: svenstaro/upload-release-action@v2
       with:
-        files: ./lib/build/outputs/aar/lib-release.aar
-        name: client-side-ad-tracking-android-${{ env.RELEASE_VERSION }}.aar
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ./lib/build/outputs/aar/lib-release.aar
+        asset_name: client-side-ad-tracking-android-${{ env.RELEASE_VERSION }}.aar
+        tag: ${{ github.ref }}
+        overwrite: true
 
 # FIXME: Maven Central publishing is now broken
 #    - name: Retrieve the secret and decode it to a file
