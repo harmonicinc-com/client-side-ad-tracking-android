@@ -1,9 +1,10 @@
+import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    id("maven-publish")
+    id("com.vanniktech.maven.publish")
     id("org.jetbrains.kotlin.plugin.serialization") version "1.8.10"
-    signing
 }
 
 @Suppress("UnstableApiUsage")
@@ -61,7 +62,10 @@ dependencies {
     val coroutinesVersion = "1.7.3"
     val okhttpVersion = "4.12.0"
 
-    implementation(project(":lib:lib"))
+    // Use compileOnly for OMSDK AAR to exclude it from POM
+    compileOnly(project(":lib:lib"))
+    // Also add it as testImplementation so tests can run
+    testImplementation(project(":lib:lib"))
 
     // 3rd party libs
     implementation("com.google.android.gms:play-services-pal:20.1.1") {}
@@ -77,6 +81,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$coroutinesVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
+
+    // Fix for Javadoc generation - ensure correct kotlin-reflect version
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.10")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
     testImplementation("org.robolectric:robolectric:4.10.3")
@@ -101,85 +108,55 @@ val licenseName: String by project
 val licenseUrl: String by project
 val developerOrg: String by project
 val developerName: String by project
+val developerUrl: String by project
 val releaseVersion: String by project
 
 // Exclude OMSDK local aar (named "lib")
 val excludedArtifact = setOf("lib")
 
-// Credentials
-val ossrhUsername: String? = System.getenv("OSSRH_USERNAME")
-val ossrhPassword: String? = System.getenv("OSSRH_PASSWORD")
-ext["signing.keyId"] = System.getenv("SIGNING_KEY_ID")
-ext["signing.password"] = System.getenv("SIGNING_PASSWORD")
-ext["signing.secretKeyRingFile"] = System.getenv("SIGNING_SECRET_KEY_RING_FILE")
-
 val buildNumber: String? = System.getenv("BUILD_NUMBER")
+val fullVersion = "$releaseVersion.$buildNumber"
 
-signing {
-    sign(publishing.publications)
-}
+mavenPublishing {
+   configure(AndroidSingleVariantLibrary(
+       variant = "release",
+       sourcesJar = true,
+       publishJavadocJar = true,
+   ))
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            groupId = publishedGroupId
-            artifactId = artifactName
-            version = "$releaseVersion.$buildNumber"
-            artifact("$buildDir/outputs/aar/${project.name}-release.aar")
+   publishToMavenCentral(
+       host = com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL,
+       automaticRelease = true
+   )
 
-            pom {
-                name.set(libraryName)
-                description.set(libraryDescription)
-                url.set(siteUrl)
+   signAllPublications()
 
-                licenses {
-                    license {
-                        name.set(licenseName)
-                        url.set(licenseUrl)
-                    }
-                }
-                developers {
-                    developer {
-                        name.set(developerName)
-                    }
-                }
-                organization {
-                    name.set(developerOrg)
-                }
-                scm {
-                    connection.set(gitUrl)
-                    developerConnection.set(gitUrl)
-                    url.set(siteUrl)
-                }
-                withXml {
-                    val dependenciesNode = asNode().appendNode("dependencies")
-                    val configurationNames = arrayOf("implementation", "api")
-                    configurationNames.forEach { configurationName ->
-                        configurations[configurationName].allDependencies.forEach {
-                            // Exclude OMSDK AAR in POM as it is private
-                            if (it.group != null && it.name !in excludedArtifact) {
-                                val dependencyNode = dependenciesNode.appendNode("dependency")
-                                dependencyNode.appendNode("groupId", it.group)
-                                dependencyNode.appendNode("artifactId", it.name)
-                                dependencyNode.appendNode("version", it.version)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    repositories {
-        maven {
-            name = "sonatype"
-            val releasesRepoUrl = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            val snapshotsRepoUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
-            url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
+   coordinates(publishedGroupId, artifactName, fullVersion)
 
-            credentials {
-                username = System.getenv("OSSRH_DEPLOY_USERNAME")
-                password = System.getenv("OSSRH_DEPLOY_PASSWORD")
-            }
-        }
-    }
+   pom {
+       name.set(libraryName)
+       description.set(libraryDescription)
+       url.set(siteUrl)
+
+       licenses {
+           license {
+               name.set(licenseName)
+               url.set(licenseUrl)
+           }
+       }
+
+       developers {
+           developer {
+               name.set(developerName)
+               organization.set(developerOrg)
+               url.set(developerUrl)
+           }
+       }
+
+       scm {
+           url.set(siteUrl)
+           connection.set("scm:git:git://$gitUrl")
+           developerConnection.set("scm:git:ssh://git@$gitUrl")
+       }
+   }
 }
