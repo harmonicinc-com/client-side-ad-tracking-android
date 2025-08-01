@@ -23,16 +23,16 @@ Android 8.0 (API 26) or above
    Groovy:
    ```groovy
    dependencies {
-       implementation 'com.github.harmonicinc-com:client-side-ad-tracking-android:0.1.4' 
+       implementation 'io.github.harmonicinc-com:client-side-ad-tracking-android:0.1.14' 
    }
    ```
    Kotlin:
    ```kotlin
    dependencies {
-       implementation("com.github.harmonicinc-com:client-side-ad-tracking-android:0.1.4") 
+       implementation("io.github.harmonicinc-com:client-side-ad-tracking-android:0.1.14") 
    }
    ```
-   Change version to the latest available. You may find the latest version [here](https://central.sonatype.com/artifact/com.github.harmonicinc-com/client-side-ad-tracking-android/).
+   Change version to the latest available. You may find the latest version [here](https://central.sonatype.com/artifact/io.github.harmonicinc-com/client-side-ad-tracking-android/).
 
 2. Include the OMSDK library as dependency
    > [!NOTE]  
