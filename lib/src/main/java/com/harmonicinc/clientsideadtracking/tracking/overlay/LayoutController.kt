@@ -18,7 +18,10 @@ import java.util.Date
 import java.util.Locale
 
 @SuppressLint("SetTextI18n")
-class LayoutController(private var overlayView: View) {
+class LayoutController(
+    private var overlayView: View,
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
+) {
     private lateinit var rawPlayerPosition: TextView
     private lateinit var timeToNextAd: TextView
 
@@ -74,19 +77,19 @@ class LayoutController(private var overlayView: View) {
     }
 
     fun setNoPod() {
-        CoroutineScope(Dispatchers.Main).launch {
+        coroutineScope.launch {
             currentPodLayout.visibility = View.INVISIBLE
         }
     }
 
     fun setNoAd() {
-        CoroutineScope(Dispatchers.Main).launch {
+        coroutineScope.launch {
             currentAdLayout.visibility = View.INVISIBLE
         }
     }
 
     fun setCurrentPod(podId: String, podStart: Long, podDuration: Long) {
-        CoroutineScope(Dispatchers.Main).launch {
+        coroutineScope.launch {
             currentPodLayout.visibility = View.VISIBLE
             currentPodId.text = podId
             currentPodStart.text = "${podStart / 1000}s"
@@ -96,7 +99,7 @@ class LayoutController(private var overlayView: View) {
     }
 
     fun setCurrentAd(adId: String, adStart: Long, adDuration: Long) {
-        CoroutineScope(Dispatchers.Main).launch {
+        coroutineScope.launch {
             currentAdLayout.visibility = View.VISIBLE
             trackingEventLabel.visibility = View.VISIBLE
             currentAdId.text = adId
@@ -107,7 +110,7 @@ class LayoutController(private var overlayView: View) {
     }
 
     fun pushEventLog(eventLog: EventLog) {
-        CoroutineScope(Dispatchers.Main).launch {
+        coroutineScope.launch {
             // Keep the last 10 only
             if (trackingEventLayout.childCount >= 10) {
                 trackingEventLayout.removeViews(0, trackingEventLayout.childCount - 9)
