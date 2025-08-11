@@ -22,6 +22,9 @@ import com.harmonicinc.clientsideadtracking.tracking.model.Ad
 import com.harmonicinc.clientsideadtracking.tracking.model.icon.Attributes
 import com.harmonicinc.clientsideadtracking.tracking.model.icon.iconclicks.IconClickFallbackImage
 import com.harmonicinc.clientsideadtracking.tracking.util.AndroidUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class AdChoiceManager(
     private val context: Context,
@@ -42,10 +45,14 @@ class AdChoiceManager(
         if (adChoiceView == null) {
             adChoiceView = inflateAdChoiceView(context)
         }
-        overlayViewContainer?.let {
-            addViewToContainerView(adChoiceView!!, it)
-        } ?: run {
-            addViewToContainerView(adChoiceView!!, playerView)
+        
+        // Ensure UI operations happen on main thread
+        CoroutineScope(Dispatchers.Main).launch {
+            overlayViewContainer?.let {
+                addViewToContainerView(adChoiceView!!, it)
+            } ?: run {
+                addViewToContainerView(adChoiceView!!, playerView)
+            }
         }
     }
 
@@ -82,60 +89,64 @@ class AdChoiceManager(
         if (ad.icons.isEmpty() || iconShowing) return
         val adIcon = ad.icons[0]
 
-        // Download AdChoice icon
-        val imageButton = ImageButton(context)
-        Glide.with(context).load(adIcon.staticResource.uri).into(imageButton)
-        val relativeLayoutParams = RelativeLayout.LayoutParams(
-            adIcon.attributes.width,
-            adIcon.attributes.height,
-        )
-        setImagePosition(relativeLayoutParams, adIcon.attributes)
-        imageButton.layoutParams = relativeLayoutParams
-        imageButton.setPadding(0, 0, 0, 0)
-        imageButton.isClickable = true
-        imageButton.isFocusable = true
-        imageButton.setBackgroundResource(R.drawable.adchoices_selector)
+        // Ensure UI operations happen on main thread
+        CoroutineScope(Dispatchers.Main).launch {
+            // Download AdChoice icon
+            val imageButton = ImageButton(context)
+            Glide.with(context).load(adIcon.staticResource.uri).into(imageButton)
+            val relativeLayoutParams = RelativeLayout.LayoutParams(
+                adIcon.attributes.width,
+                adIcon.attributes.height,
+            )
+            setImagePosition(relativeLayoutParams, adIcon.attributes)
+            imageButton.layoutParams = relativeLayoutParams
+            imageButton.setPadding(0, 0, 0, 0)
+            imageButton.isClickable = true
+            imageButton.isFocusable = true
+            imageButton.setBackgroundResource(R.drawable.adchoices_selector)
 
-        imageButton.setOnClickListener {
-            try {
-                if (!AndroidUtils.isTelevision(context)) {
-                    throw UnsupportedOperationException("Not running on a TV device")
-                }
-                val fallbackImages = getIconClickFallbackImages(adIcon.iconClicks.iconClickFallbackImages)
-                adsControlsManager.handleIconClick(fallbackImages)
-            } catch (e: Exception) {
-                Log.w(tag, "Unable to render AT&C using Android TV ads lib, using alternate method")
+            imageButton.setOnClickListener {
                 try {
-                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(adIcon.iconClicks.iconClickThrough))
-                    context.startActivity(browserIntent)
+                    if (!AndroidUtils.isTelevision(context)) {
+                        throw UnsupportedOperationException("Not running on a TV device")
+                    }
+                    val fallbackImages = getIconClickFallbackImages(adIcon.iconClicks.iconClickFallbackImages)
+                    adsControlsManager.handleIconClick(fallbackImages)
                 } catch (e: Exception) {
-                    Log.w(tag, "Unable to render AT&C using alternate method, showing fallback image")
-                    if (adIcon.iconClicks.iconClickFallbackImages.isNotEmpty()) {
-                        val fallbackImg = adIcon.iconClicks.iconClickFallbackImages[0]
-                        iconFallbackImageView = getIconFallbackImageView(fallbackImg)
-                        iconFallbackImageView!!.setOnClickListener {
-                            adChoiceView?.removeView(it)
+                    Log.w(tag, "Unable to render AT&C using Android TV ads lib, using alternate method")
+                    try {
+                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(adIcon.iconClicks.iconClickThrough))
+                        context.startActivity(browserIntent)
+                    } catch (e: Exception) {
+                        Log.w(tag, "Unable to render AT&C using alternate method, showing fallback image")
+                        if (adIcon.iconClicks.iconClickFallbackImages.isNotEmpty()) {
+                            val fallbackImg = adIcon.iconClicks.iconClickFallbackImages[0]
+                            iconFallbackImageView = getIconFallbackImageView(fallbackImg)
+                            iconFallbackImageView!!.setOnClickListener {
+                                adChoiceView?.removeView(it)
+                            }
+                            val fallbackRelativeLayoutParams = RelativeLayout.LayoutParams(
+                                fallbackImg.width,
+                                fallbackImg.height,
+                            )
+                            fallbackRelativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT)
+                            adChoiceView!!.addView(iconFallbackImageView, fallbackRelativeLayoutParams)
+                        } else {
+                            Log.e(tag, "Failed to show a fallback image")
                         }
-                        val fallbackRelativeLayoutParams = RelativeLayout.LayoutParams(
-                            fallbackImg.width,
-                            fallbackImg.height,
-                        )
-                        fallbackRelativeLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT)
-                        adChoiceView!!.addView(iconFallbackImageView, fallbackRelativeLayoutParams)
-                    } else {
-                        Log.e(tag, "Failed to show a fallback image")
                     }
                 }
             }
+
+            imageButton.viewTreeObserver.addOnGlobalFocusChangeListener(onTvFocusChangeListener)
+
+            adChoiceView!!.addView(imageButton, relativeLayoutParams)
+            adChoiceView!!.visibility = View.VISIBLE
+            iconShowing = true
+            this@AdChoiceManager.imageButton = imageButton
+
+            imageButton.requestFocus()
         }
-
-        imageButton.viewTreeObserver.addOnGlobalFocusChangeListener(onTvFocusChangeListener)
-
-        adChoiceView!!.addView(imageButton, relativeLayoutParams)
-        adChoiceView!!.visibility = View.VISIBLE
-        iconShowing = true
-
-        imageButton.requestFocus()
     }
 
     private val onTvFocusChangeListener =
@@ -146,11 +157,14 @@ class AdChoiceManager(
         }
 
     private fun hideAdChoice() {
-        adChoiceView?.removeAllViews()
-        adChoiceView?.visibility = View.INVISIBLE
-        iconShowing = false
-        imageButton?.viewTreeObserver?.removeOnGlobalFocusChangeListener(onTvFocusChangeListener)
-        imageButton = null
+        // Ensure UI operations happen on main thread
+        CoroutineScope(Dispatchers.Main).launch {
+            adChoiceView?.removeAllViews()
+            adChoiceView?.visibility = View.INVISIBLE
+            iconShowing = false
+            imageButton?.viewTreeObserver?.removeOnGlobalFocusChangeListener(onTvFocusChangeListener)
+            imageButton = null
+        }
     }
 
     private fun getIconFallbackImageView(fallbackImg: IconClickFallbackImage): ImageView {

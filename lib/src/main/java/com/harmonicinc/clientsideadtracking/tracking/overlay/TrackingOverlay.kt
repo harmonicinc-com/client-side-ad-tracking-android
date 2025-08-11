@@ -47,21 +47,29 @@ class TrackingOverlay(
 
     var showOverlay = false
         set(value) {
-            overlayView.visibility = if (value) View.VISIBLE else View.INVISIBLE
-            field = value
+            // Ensure UI operations happen on main thread
+            CoroutineScope(Dispatchers.Main).launch {
+                overlayView.visibility = if (value) View.VISIBLE else View.INVISIBLE
+                field = value
+            }
         }
 
     init {
         val inflater = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         overlayView = inflater.inflate(R.layout.tracking_event_view, null)
         overlayView.visibility = if (showOverlay) View.VISIBLE else View.INVISIBLE
-        overlayViewContainer?.let {
-            OverlayHelper.addViewToContainerView(overlayView, it)
-        } ?: run {
-            // add to top-level as workaround
-            Log.w("TrackingOverlay", "OverlayViewContainer missing")
-            OverlayHelper.addViewToContainerView(overlayView, playerView)
+        
+        // Ensure UI operations happen on main thread
+        CoroutineScope(Dispatchers.Main).launch {
+            overlayViewContainer?.let {
+                OverlayHelper.addViewToContainerView(overlayView, it)
+            } ?: run {
+                // add to top-level as workaround
+                Log.w("TrackingOverlay", "OverlayViewContainer missing")
+                OverlayHelper.addViewToContainerView(overlayView, playerView)
+            }
         }
+        
         layoutController = LayoutController(overlayView)
         layoutController.start()
 
