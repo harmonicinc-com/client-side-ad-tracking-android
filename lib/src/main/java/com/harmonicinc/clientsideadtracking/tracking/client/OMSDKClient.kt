@@ -97,7 +97,7 @@ class OMSDKClient(
     private fun impressionOccurred() {
         preFireEvent(Tracking.Event.IMPRESSION)
         Log.d(TAG, "adEvents.impressionOccurred()")
-        adEvents?.impressionOccurred()
+        adEvents!!.impressionOccurred()
         pushEventLog(Tracking.Event.IMPRESSION)
     }
 
@@ -106,35 +106,35 @@ class OMSDKClient(
         val duration = playerAdapter.getDuration().toFloat()
         val volume = playerAdapter.getAudioVolume()
         Log.d(TAG, "mediaEvents.start($duration, $volume)")
-        mediaEvents?.start(duration, volume)
+        mediaEvents!!.start(duration, volume)
         pushEventLog(Tracking.Event.START)
     }
 
     private fun firstQuartile() {
-        Log.d(TAG, "mediaEvents.firstQuartile()")
+        Log.d(TAG, "mediaEvents!!.firstQuartile()")
         preFireEvent(Tracking.Event.FIRST_QUARTILE)
-        mediaEvents?.firstQuartile()
+        mediaEvents!!.firstQuartile()
         pushEventLog(Tracking.Event.FIRST_QUARTILE)
     }
 
     private fun midpoint() {
-        Log.d(TAG, "mediaEvents.midpoint()")
+        Log.d(TAG, "mediaEvents!!.midpoint()")
         preFireEvent(Tracking.Event.MIDPOINT)
-        mediaEvents?.midpoint()
+        mediaEvents!!.midpoint()
         pushEventLog(Tracking.Event.MIDPOINT)
     }
 
     private fun thirdQuartile() {
-        Log.d(TAG, "mediaEvents.thirdQuartile()")
+        Log.d(TAG, "mediaEvents!!.thirdQuartile()")
         preFireEvent(Tracking.Event.THIRD_QUARTILE)
-        mediaEvents?.thirdQuartile()
+        mediaEvents!!.thirdQuartile()
         pushEventLog(Tracking.Event.THIRD_QUARTILE)
     }
 
     private fun complete() {
-        Log.d(TAG, "mediaEvents.complete()")
+        Log.d(TAG, "mediaEvents!!.complete()")
         preFireEvent(Tracking.Event.COMPLETE)
-        mediaEvents?.complete()
+        mediaEvents!!.complete()
         pushEventLog(Tracking.Event.COMPLETE)
         destroySession()
     }
@@ -156,8 +156,8 @@ class OMSDKClient(
     }
 
     private fun pushEventLog(event: Tracking.Event) {
-        val adBreakId = currentAdBreak?.id ?: ""
-        val adId = currentAd?.id ?: ""
+        val adBreakId = currentAdBreak!!.id
+        val adId = currentAd!!.id
         coroutineScope.launch {
             val eventLog = EventLog(
                 "OMSDK",
@@ -207,24 +207,18 @@ class OMSDKClient(
             // Terminate previous session first
             destroySession()
         }
-        if (adSession == null && adVerifications != null) {
+        if (adSession == null) {
             createSession()
         }
     }
 
     private fun createSession() {
-        val verifications = adVerifications
-        if (verifications == null) {
-            Log.w(TAG, "Cannot create session without ad verifications")
-            return
-        }
-        
         adSession = try {
             AdSessionUtil.getNativeAdSession(
                 context,
                 customReferenceData,
                 CreativeType.VIDEO,
-                verifications
+                adVerifications!!
             )
         } catch (e: MalformedURLException) {
             Log.d(TAG, "setupAdSession failed", e)
@@ -232,10 +226,10 @@ class OMSDKClient(
         }
         mediaEvents = MediaEvents.createMediaEvents(adSession)
         adEvents = AdEvents.createAdEvents(adSession)
-        adSession?.registerAdView(playerView)
+        adSession!!.registerAdView(playerView)
 
-        adSession?.start()
-        adEvents?.loaded()
+        adSession!!.start()
+        adEvents!!.loaded()
         Log.d(TAG, "Session created")
     }
 }

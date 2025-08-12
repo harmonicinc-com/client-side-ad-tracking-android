@@ -10,9 +10,6 @@ import android.widget.RelativeLayout
 import android.widget.TextView
 import com.github.harmonicinc.clientsideadtracking.R
 import com.harmonicinc.clientsideadtracking.tracking.model.EventLog
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -74,71 +71,61 @@ class LayoutController(private var overlayView: View) {
     }
 
     fun setNoPod() {
-        CoroutineScope(Dispatchers.Main).launch {
-            currentPodLayout.visibility = View.INVISIBLE
-        }
+        currentPodLayout.visibility = View.INVISIBLE
     }
 
     fun setNoAd() {
-        CoroutineScope(Dispatchers.Main).launch {
-            currentAdLayout.visibility = View.INVISIBLE
-        }
+        currentAdLayout.visibility = View.INVISIBLE
     }
 
     fun setCurrentPod(podId: String, podStart: Long, podDuration: Long) {
-        CoroutineScope(Dispatchers.Main).launch {
-            currentPodLayout.visibility = View.VISIBLE
-            currentPodId.text = podId
-            currentPodStart.text = "${podStart / 1000}s"
-            currentPodEnd.text = "${(podStart + podDuration) / 1000}s"
-            currentPodDuration.text = "${podDuration / 1000}s"
-        }
+        currentPodLayout.visibility = View.VISIBLE
+        currentPodId.text = podId
+        currentPodStart.text = "${podStart / 1000}s"
+        currentPodEnd.text = "${(podStart + podDuration) / 1000}s"
+        currentPodDuration.text = "${podDuration / 1000}s"
     }
 
     fun setCurrentAd(adId: String, adStart: Long, adDuration: Long) {
-        CoroutineScope(Dispatchers.Main).launch {
-            currentAdLayout.visibility = View.VISIBLE
-            trackingEventLabel.visibility = View.VISIBLE
-            currentAdId.text = adId
-            currentAdStart.text = "${adStart / 1000}s"
-            currentAdEnd.text = "${(adStart + adDuration) / 1000}s"
-            currentAdDuration.text = "${adDuration / 1000}s"
-        }
+        currentAdLayout.visibility = View.VISIBLE
+        trackingEventLabel.visibility = View.VISIBLE
+        currentAdId.text = adId
+        currentAdStart.text = "${adStart / 1000}s"
+        currentAdEnd.text = "${(adStart + adDuration) / 1000}s"
+        currentAdDuration.text = "${adDuration / 1000}s"
     }
 
     fun pushEventLog(eventLog: EventLog) {
-        CoroutineScope(Dispatchers.Main).launch {
-            // Keep the last 10 only
-            if (trackingEventLayout.childCount >= 10) {
-                trackingEventLayout.removeViews(0, trackingEventLayout.childCount - 9)
-            }
-
-            val eventLayout = RelativeLayout(overlayView.context)
-            eventLayout.setPadding(0, 5.dp, 0, 5.dp)
-            eventLayout.layoutParams =
-                RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
-
-            // Event name
-            val eventName = TextView(overlayView.context)
-            val eventLayoutParams =
-                RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
-            eventName.layoutParams = eventLayoutParams
-            eventName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
-            eventName.text = "[${eventLog.clientTag}] ${eventLog.adBreakId} > ${eventLog.adId} > ${eventLog.event.name}"
-
-            // Event time
-            val eventTime = TextView(overlayView.context)
-            eventTime.layoutParams =
-                RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
-            eventTime.gravity = Gravity.RIGHT
-            eventTime.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
-            eventTime.text = formatTime(eventLog.time)
-
-            eventLayout.addView(eventName)
-            eventLayout.addView(eventTime)
-
-            trackingEventLayout.addView(eventLayout)
+        // Keep the last 10 only
+        if (trackingEventLayout.childCount >= 10) {
+            trackingEventLayout.removeViews(0, trackingEventLayout.childCount - 9)
         }
+
+        val eventLayout = RelativeLayout(overlayView.context)
+        eventLayout.setPadding(0, 5.dp, 0, 5.dp)
+        eventLayout.layoutParams =
+            RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+
+        // Event name
+        val eventName = TextView(overlayView.context)
+        val eventLayoutParams =
+            RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+        eventName.layoutParams = eventLayoutParams
+        eventName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+        eventName.text = "[${eventLog.clientTag}] ${eventLog.adBreakId} > ${eventLog.adId} > ${eventLog.event.name}"
+
+        // Event time
+        val eventTime = TextView(overlayView.context)
+        eventTime.layoutParams =
+            RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+        eventTime.gravity = Gravity.RIGHT
+        eventTime.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+        eventTime.text = formatTime(eventLog.time)
+
+        eventLayout.addView(eventName)
+        eventLayout.addView(eventTime)
+
+        trackingEventLayout.addView(eventLayout)
     }
 
     private fun formatTime(time: Long): String {
