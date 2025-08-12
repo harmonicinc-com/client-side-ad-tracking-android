@@ -183,6 +183,12 @@ Android 8.0 (API 26) or above
      )
      ```
 
+     > [!IMPORTANT]  
+     > **Threading Requirements:**
+     > - **Must be called from the main thread**
+     > 
+     > The library will throw an `IllegalStateException` if called from a background thread.
+
      > [!NOTE]  
      > When `playerView` is not provided, only PMM beacon tracking will be active. OMSDK verification, tracking overlays, and ad choices will be disabled since they require view access for viewability measurement.
 6. Stop the library after playback 
