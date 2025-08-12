@@ -31,7 +31,7 @@ class AdChoiceManager(
     overlayViewContainer: ViewGroup?,
     playerView: ViewGroup,
     private val tracker: AdMetadataTracker,
-    private val coroutineScope: CoroutineScope,
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
     private var adChoiceView: RelativeLayout? = null
     private var iconFallbackImageView: ImageView? = null
@@ -48,7 +48,7 @@ class AdChoiceManager(
         }
         
         // Ensure UI operations happen on main thread
-        coroutineScope.launch {
+        CoroutineScope(Dispatchers.Main).launch {
             overlayViewContainer?.let {
                 addViewToContainerView(adChoiceView!!, it)
             } ?: run {

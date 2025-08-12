@@ -33,7 +33,7 @@ class TrackingOverlay(
     private val tracker: AdMetadataTracker,
     private val omsdkClient: OMSDKClient?,
     private val pmmClient: PMMClient?,
-    private val coroutineScope: CoroutineScope,
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
     private var updateJob: Job? = null
     private var prevPodId: String? = null

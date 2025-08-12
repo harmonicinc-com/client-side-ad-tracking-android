@@ -11,6 +11,7 @@ import android.widget.TextView
 import com.github.harmonicinc.clientsideadtracking.R
 import com.harmonicinc.clientsideadtracking.tracking.model.EventLog
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -19,7 +20,7 @@ import java.util.Locale
 @SuppressLint("SetTextI18n")
 class LayoutController(
     private var overlayView: View,
-    private val coroutineScope: CoroutineScope,
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
     private lateinit var rawPlayerPosition: TextView
     private lateinit var timeToNextAd: TextView
