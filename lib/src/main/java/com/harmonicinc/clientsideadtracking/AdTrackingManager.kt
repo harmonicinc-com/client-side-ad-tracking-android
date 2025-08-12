@@ -3,6 +3,7 @@ package com.harmonicinc.clientsideadtracking
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Looper
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
@@ -139,6 +140,18 @@ class AdTrackingManager(
         generateNonceForAdRequest(params)
     }
 
+    /**
+     * Starts the ad tracking manager and initializes tracking components.
+     * **Must be called from the main thread.**
+     * 
+     * @param context Application context
+     * @param playerAdapter Adapter for the player implementation
+     * @param overlayViewContainer Optional container for overlay views
+     * @param playerView Optional player view for UI components. 
+     *
+     * @throws IllegalStateException if called from a background thread
+     * @throws RuntimeException if manifest URL or session ID is not set
+     */
     fun onPlay(
         context: Context,
         playerAdapter: PlayerAdapter,
@@ -148,6 +161,11 @@ class AdTrackingManager(
         if (manifestUrl == null) {
             Log.e(TAG, "Manifest URL not set. Unable to start metadata tracker")
             throw RuntimeException("Manifest URL not set. (Did you call prepareBeforeLoad?)")
+        }
+
+        // Check thread
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            throw IllegalStateException("onPlay() must be called from the main thread.")
         }
 
         Log.i(TAG, "Ad Tracking manager starting")
