@@ -30,8 +30,7 @@ class AdChoiceManager(
     private val context: Context,
     overlayViewContainer: ViewGroup?,
     playerView: ViewGroup,
-    private val tracker: AdMetadataTracker,
-    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
+    private val tracker: AdMetadataTracker
 ) {
     private var adChoiceView: RelativeLayout? = null
     private var iconFallbackImageView: ImageView? = null
@@ -91,7 +90,7 @@ class AdChoiceManager(
         val adIcon = ad.icons[0]
 
         // Ensure UI operations happen on main thread
-        coroutineScope.launch {
+        CoroutineScope(Dispatchers.Main).launch {
             // Download AdChoice icon
             val imageButton = ImageButton(context)
             Glide.with(context).load(adIcon.staticResource.uri).into(imageButton)
@@ -159,7 +158,7 @@ class AdChoiceManager(
 
     private fun hideAdChoice() {
         // Ensure UI operations happen on main thread
-        coroutineScope.launch {
+        CoroutineScope(Dispatchers.Main).launch {
             adChoiceView?.removeAllViews()
             adChoiceView?.visibility = View.INVISIBLE
             iconShowing = false

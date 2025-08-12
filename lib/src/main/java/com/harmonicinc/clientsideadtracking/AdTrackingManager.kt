@@ -26,10 +26,6 @@ import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_NONCE_QU
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
 import com.iab.omid.library.harmonicinc.Omid
 import java.net.URL
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.tasks.await
 
 class AdTrackingManager(
@@ -43,9 +39,6 @@ class AdTrackingManager(
     private var manifestUrl: String? = null
     private var metadataUrl: String? = null
     private var obtainedQueryParams = mutableMapOf<String, String>()
-
-    // Create a single coroutineScope for the entire manager
-    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     var omsdkClient: OMSDKClient? = null
@@ -169,8 +162,8 @@ class AdTrackingManager(
         if (playerView != null) {
             Log.d(TAG, "PlayerView provided, initializing full tracking components")
             omsdkClient = OMSDKClient(context, playerAdapter, playerView, metadataTracker, params.omidCustomReferenceData)
-            trackingOverlay = TrackingOverlay(context, playerAdapter, overlayViewContainer, playerView, metadataTracker, omsdkClient, pmmClient, coroutineScope)
-            adChoiceManager = AdChoiceManager(context, overlayViewContainer, playerView, metadataTracker, coroutineScope)
+            trackingOverlay = TrackingOverlay(context, playerAdapter, overlayViewContainer, playerView, metadataTracker, omsdkClient, pmmClient)
+            adChoiceManager = AdChoiceManager(context, overlayViewContainer, playerView, metadataTracker)
             
             trackingOverlay.showOverlay = showOverlay
         } else {
@@ -202,10 +195,6 @@ class AdTrackingManager(
         if (ssaiSupported) {
             sendPlaybackEnd()
         }
-        
-        // Cancel the coroutineScope when cleaning up
-        coroutineScope.cancel()
-        
         Log.i(TAG, "Ad Tracking manager stopped")
     }
 

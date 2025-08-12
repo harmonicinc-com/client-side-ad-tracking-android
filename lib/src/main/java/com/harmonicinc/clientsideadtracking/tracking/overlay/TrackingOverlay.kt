@@ -32,8 +32,7 @@ class TrackingOverlay(
     playerView: ViewGroup,
     private val tracker: AdMetadataTracker,
     private val omsdkClient: OMSDKClient?,
-    private val pmmClient: PMMClient?,
-    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
+    private val pmmClient: PMMClient?
 ) {
     private var updateJob: Job? = null
     private var prevPodId: String? = null
@@ -49,7 +48,7 @@ class TrackingOverlay(
     var showOverlay = false
         set(value) {
             // Ensure UI operations happen on main thread
-            coroutineScope.launch {
+            CoroutineScope(Dispatchers.Main).launch {
                 overlayView.visibility = if (value) View.VISIBLE else View.INVISIBLE
                 field = value
             }
@@ -61,7 +60,7 @@ class TrackingOverlay(
         overlayView.visibility = if (showOverlay) View.VISIBLE else View.INVISIBLE
         
         // Ensure UI operations happen on main thread
-        coroutineScope.launch {
+        CoroutineScope(Dispatchers.Main).launch {
             overlayViewContainer?.let {
                 OverlayHelper.addViewToContainerView(overlayView, it)
             } ?: run {
@@ -71,7 +70,7 @@ class TrackingOverlay(
             }
         }
         
-        layoutController = LayoutController(overlayView, coroutineScope)
+        layoutController = LayoutController(overlayView)
         layoutController.start()
 
         addListeners()
