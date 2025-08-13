@@ -163,11 +163,6 @@ class AdTrackingManager(
             throw RuntimeException("Manifest URL not set. (Did you call prepareBeforeLoad?)")
         }
 
-        // Check thread
-        if (Looper.myLooper() != Looper.getMainLooper()) {
-            throw IllegalStateException("onPlay() must be called from the main thread.")
-        }
-
         Log.i(TAG, "Ad Tracking manager starting")
         // Init tracking client
         this.playerAdapter = playerAdapter
@@ -179,6 +174,12 @@ class AdTrackingManager(
         // Only initialize view-dependent components if playerView is provided
         if (playerView != null) {
             Log.d(TAG, "PlayerView provided, initializing full tracking components")
+
+            // Check thread
+            if (Looper.myLooper() != Looper.getMainLooper()) {
+                throw IllegalStateException("onPlay() must be called from the main thread.")
+            }
+
             omsdkClient = OMSDKClient(context, playerAdapter, playerView, metadataTracker, params.omidCustomReferenceData)
             trackingOverlay = TrackingOverlay(context, playerAdapter, overlayViewContainer, playerView, metadataTracker, omsdkClient, pmmClient)
             adChoiceManager = AdChoiceManager(context, overlayViewContainer, playerView, metadataTracker)
