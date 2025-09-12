@@ -219,7 +219,8 @@ class AdTrackingManager(
 
     fun appendNonceToUrl(urls: List<String>): List<String> {
         return urls.map {
-            val builder = Uri.parse(it).buildUpon()
+            val uri = Uri.parse(it)
+            val builder = uri.buildUpon()
 
             if (obtainedQueryParams.isNotEmpty()) {
                 obtainedQueryParams.forEach { (key, value) ->
@@ -227,11 +228,14 @@ class AdTrackingManager(
                 }
             }
 
-            builder
-                .appendQueryParameter(PAL_NONCE_QUERY_PARAM_KEY, nonceManager.nonce)
-                .appendQueryParameter(SESSION_ID_QUERY_PARAM_KEY, sessionId)
-                .build()
-                .toString()
+            builder.appendQueryParameter(PAL_NONCE_QUERY_PARAM_KEY, nonceManager.nonce)
+            
+            // Only add sessionId if it doesn't already exist in the URL
+            if (uri.getQueryParameter(SESSION_ID_QUERY_PARAM_KEY) == null) {
+                builder.appendQueryParameter(SESSION_ID_QUERY_PARAM_KEY, sessionId)
+            }
+            
+            builder.build().toString()
         }
     }
 

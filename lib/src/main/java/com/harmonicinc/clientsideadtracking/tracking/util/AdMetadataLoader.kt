@@ -17,12 +17,15 @@ object AdMetadataLoader {
     }
 
     private suspend fun getEventManifest(okHttpService: OkHttpService, metadataUrl: String, sessionId: String, startOverride: Long?): String {
-        val uriBuilder = Uri.parse(metadataUrl)
-            .buildUpon()
-            .appendQueryParameter(Constants.SESSION_ID_QUERY_PARAM_KEY, sessionId)
-        if (startOverride != null) {
-            uriBuilder.appendQueryParameter(Constants.PMM_METADATA_START_QUERY_PARAM_KEY, startOverride.toString())
+        val uri = Uri.parse(metadataUrl)
+        val builder = uri.buildUpon()
+
+        if (uri.getQueryParameter(Constants.SESSION_ID_QUERY_PARAM_KEY) == null) {
+            builder.appendQueryParameter(Constants.SESSION_ID_QUERY_PARAM_KEY, sessionId)
         }
-        return okHttpService.getString(uriBuilder.build().toString())
+        if (startOverride != null) {
+            builder.appendQueryParameter(Constants.PMM_METADATA_START_QUERY_PARAM_KEY, startOverride.toString())
+        }
+        return okHttpService.getString(builder.build().toString())
     }
 }
