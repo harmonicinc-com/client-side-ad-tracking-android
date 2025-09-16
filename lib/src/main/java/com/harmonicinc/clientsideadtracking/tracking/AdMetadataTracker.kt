@@ -16,7 +16,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 
@@ -84,10 +83,7 @@ class AdMetadataTracker(
         metadataUpdateJob = coroutineIOScope.launch {
             while (isActive) {
                 try {
-                    val mpdTime = withContext(coroutineMainScope.coroutineContext) {
-                        DashHelper.getMpdTimeMs(playerAdapter)
-                    }
-                    eventRef.set(AdMetadataLoader.load(okHttpService, metadataUrl, sessionId, mpdTime))
+                    eventRef.set(AdMetadataLoader.load(okHttpService, metadataUrl, sessionId))
                 } catch (e: Exception) {
                     Log.e(TAG, "Unable to get metadata due to error: ${e.message}")
                     // Ignore error and keep retrying
