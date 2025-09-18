@@ -16,7 +16,8 @@ import java.util.concurrent.ConcurrentHashMap
  * Cache expiration is based on when ad breaks were first cached.
  */
 class MetadataCacheManager(
-    private val cacheRetentionTimeMs: Long = 2 * 60 * 60 * 1000L // Default: 2 hours
+    private val cacheRetentionTimeMs: Long = 2 * 60 * 60 * 1000L, // Default: 2 hours
+    private val timeProvider: () -> Long = { System.currentTimeMillis() } // Injectable time provider for testing
 ) {
     private val TAG = "MetadataCacheManager"
     
@@ -55,7 +56,7 @@ class MetadataCacheManager(
         }
         
         // Merge ad breaks
-        val currentTime = System.currentTimeMillis()
+        val currentTime = timeProvider()
         newManifest.adBreaks.forEach { newAdBreak ->
             val cachedAdBreak = adBreakCache[newAdBreak.id]
             if (cachedAdBreak != null) {
@@ -85,14 +86,16 @@ class MetadataCacheManager(
      * Merge tracking state from cached ad break to new ad break
      */
     private fun mergeAdBreak(cached: AdBreak, new: AdBreak) {
-        // Update ad break properties but preserve tracking state
+        // Build a map from ad ID to cached Ad
+        val cachedAdMap = cached.ads.associateBy { it.id }
+        // For each new ad, try to find the cached ad and merge tracking state
         new.ads.forEach { newAd ->
-            val cachedAd = cached.ads.find { it.id == newAd.id }
+            val cachedAd = cachedAdMap[newAd.id]
             if (cachedAd != null) {
-                // Replace the new ad's tracking list with the cached one to preserve fired state
+                // Build a map from tracking unique ID to cached tracking
+                val cachedTrackingMap = cachedAd.tracking.associateBy { it.getUniqueId() }
                 newAd.tracking.forEach { newTracking ->
-                    // Find matching tracking event in cached ad by unique ID
-                    val cachedTracking = cachedAd.tracking.find { it.getUniqueId() == newTracking.getUniqueId() }
+                    val cachedTracking = cachedTrackingMap[newTracking.getUniqueId()]
                     if (cachedTracking != null && cachedTracking.fired) {
                         newTracking.fired = true
                     }
@@ -110,7 +113,8 @@ class MetadataCacheManager(
         if (cachedAdBreak != null) {
             val cachedAd = cachedAdBreak.ads.find { it.id == currentAd.id }
             if (cachedAd != null) {
-                val cachedTracking = cachedAd.tracking.find { it.getUniqueId() == tracking.getUniqueId() }
+                val trackingMap = cachedAd.tracking.associateBy { it.getUniqueId() }
+                val cachedTracking = trackingMap[tracking.getUniqueId()]
                 if (cachedTracking != null) {
                     cachedTracking.fired = true
                     Log.d(TAG, "Marked tracking as fired in cache: ${tracking.event} at ${tracking.startTime}")
@@ -129,7 +133,7 @@ class MetadataCacheManager(
      * Clean up expired cache entries based on when they were first cached
      */
     private fun cleanupExpiredEntries() {
-        val currentTime = System.currentTimeMillis()
+        val currentTime = timeProvider()
         val adBreaksToRemove = mutableListOf<String>()
         
         // Remove ad breaks that were cached longer than retention time ago
@@ -185,7 +189,7 @@ class MetadataCacheManager(
             }
         }
         val oldestCacheTime = adBreakCacheTimestamps.values.minOfOrNull { it } ?: 0L
-        val cacheAgeMs = if (oldestCacheTime > 0) System.currentTimeMillis() - oldestCacheTime else 0L
+        val cacheAgeMs = if (oldestCacheTime > 0) timeProvider() - oldestCacheTime else 0L
         return "AdBreaks: ${adBreakCache.size}, FiredEvents: $totalFiredEvents, Range: $minSeenTime-$maxSeenTime, OldestCacheAge: ${cacheAgeMs}ms"
     }
 }

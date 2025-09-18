@@ -4,7 +4,6 @@ import com.harmonicinc.clientsideadtracking.tracking.model.Ad
 import com.harmonicinc.clientsideadtracking.tracking.model.AdBreak
 import com.harmonicinc.clientsideadtracking.tracking.model.EventManifest
 import com.harmonicinc.clientsideadtracking.tracking.model.Tracking
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
 import org.json.JSONObject
@@ -115,8 +114,12 @@ class MetadataCacheManagerTest {
 
     @Test
     fun testCacheExpiration() = runTest(timeout = 10.seconds) {
+        // Use a controllable time provider
+        var currentTestTime = 0L
+        val timeProvider = { currentTestTime }
+        
         // Use a very short cache retention time for this test
-        val shortRetentionCacheManager = MetadataCacheManager(100L) // 100ms
+        val shortRetentionCacheManager = MetadataCacheManager(100L, timeProvider) // 100ms
         
         // Create initial manifest
         val manifest1 = createTestManifest(
@@ -129,8 +132,8 @@ class MetadataCacheManagerTest {
         val merged1 = shortRetentionCacheManager.mergeEventManifest(manifest1)
         assertEquals(1, merged1.adBreaks.size)
 
-        // Wait for cache to expire
-        Thread.sleep(200L) // Wait longer than retention time
+        // Advance time beyond cache retention time
+        currentTestTime += 200L // Simulate passage of time longer than retention time
 
         // Create new manifest with different ad break
         val manifest2 = createTestManifest(
