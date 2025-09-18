@@ -64,7 +64,7 @@ class PMMClient(
                 
                 Log.d(TAG, "onAdProgress: currentAd=${currentAd?.id}, event=${event.event}, url=${event.url}, fired=${event.fired}")
                 
-                if (currentAd != null && event.url.isNotEmpty() && !event.fired) {
+                if (currentAd != null && event.url.isNotEmpty()) {
                     when (event.event) {
                         Tracking.Event.IMPRESSION -> impressionOccurred(event.url)
                         Tracking.Event.START -> start(event.url)
@@ -74,7 +74,6 @@ class PMMClient(
                         Tracking.Event.COMPLETE -> complete(event.url)
                         else -> {}
                     }
-                    event.fired = true
                 } else {
                     Log.d(TAG, "onAdProgress: skipping beacon - currentAd=${currentAd?.id}, urlEmpty=${event.url.isEmpty()}, fired=${event.fired}")
                 }

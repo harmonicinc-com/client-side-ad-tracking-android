@@ -18,5 +18,6 @@ data class AdTrackingManagerParams(
     // Custom reference data in JSON string
     val omidCustomReferenceData: String?,
     // Optional params
-    val initRequest: Boolean = true
+    val initRequest: Boolean = true,
+    val cacheRetentionTimeMs: Long = 2 * 60 * 60 * 1000L
 )

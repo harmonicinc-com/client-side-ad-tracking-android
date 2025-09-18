@@ -166,7 +166,7 @@ class AdTrackingManager(
         Log.i(TAG, "Ad Tracking manager starting")
         // Init tracking client
         this.playerAdapter = playerAdapter
-        metadataTracker = AdMetadataTracker(playerAdapter, okHttpService)
+        metadataTracker = AdMetadataTracker(playerAdapter, okHttpService, cacheRetentionTimeMs = params.cacheRetentionTimeMs)
         
         // Always initialize PMMClient for beacon tracking
         pmmClient = PMMClient(metadataTracker, okHttpService, context)

@@ -50,4 +50,12 @@ class Tracking(
             else -> Event.UNKNOWN
         }
     }
+
+    /**
+     * Generate a unique identifier for this tracking event to maintain fired state
+     * across metadata updates and seeking operations
+     */
+    fun getUniqueId(): String {
+        return "${startTime}_${event.name}_${url.joinToString(",")}"
+    }
 }
