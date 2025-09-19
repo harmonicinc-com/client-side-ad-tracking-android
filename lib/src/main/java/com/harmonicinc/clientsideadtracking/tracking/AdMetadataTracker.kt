@@ -9,7 +9,9 @@ import com.harmonicinc.clientsideadtracking.tracking.model.AdBreak
 import com.harmonicinc.clientsideadtracking.tracking.model.EventManifest
 import com.harmonicinc.clientsideadtracking.tracking.model.Tracking
 import com.harmonicinc.clientsideadtracking.tracking.util.AdMetadataLoader
+import com.harmonicinc.clientsideadtracking.tracking.util.Constants.DEFAULT_CACHE_RETENTION_TIME_MS
 import com.harmonicinc.clientsideadtracking.tracking.util.DashHelper
+import com.harmonicinc.clientsideadtracking.tracking.util.MetadataCacheManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,6 +26,7 @@ class AdMetadataTracker(
     private val okHttpService: OkHttpService,
     private val coroutineIOScope: CoroutineScope = CoroutineScope(Dispatchers.IO),
     private val coroutineMainScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+    cacheRetentionTimeMs: Long = DEFAULT_CACHE_RETENTION_TIME_MS
 ) {
     private var progressJob: Job? = null
     private var metadataUpdateJob: Job? = null
@@ -39,6 +42,7 @@ class AdMetadataTracker(
     private val adBreakListeners = CopyOnWriteArrayList<AdBreakListener>()
     private val adProgressListeners = CopyOnWriteArrayList<AdProgressListener>()
 
+    private val metadataCacheManager = MetadataCacheManager(cacheRetentionTimeMs)
 
     private val NORMAL_PLAYBACK_SPEED_RANGE = 0.95..1.05
     private val TAG = "AdMetadataTracker"
@@ -64,6 +68,11 @@ class AdMetadataTracker(
         adProgressListeners.forEach { it.onAdProgress(null, null, Tracking(Tracking.Event.SKIPPED)) }
         progressJob?.cancel()
         metadataUpdateJob?.cancel()
+        
+        // Clear cache on stop
+        coroutineIOScope.launch {
+            metadataCacheManager.clear()
+        }
     }
 
     fun addAdBreakListener(listener: AdBreakListener) {
@@ -83,7 +92,10 @@ class AdMetadataTracker(
         metadataUpdateJob = coroutineIOScope.launch {
             while (isActive) {
                 try {
-                    eventRef.set(AdMetadataLoader.load(okHttpService, metadataUrl, sessionId))
+                    val newManifest = AdMetadataLoader.load(okHttpService, metadataUrl, sessionId)
+                    val mergedManifest = metadataCacheManager.mergeEventManifest(newManifest)
+                    eventRef.set(mergedManifest)
+                    Log.d(TAG, "Updated manifest with merged data. Cache stats: ${metadataCacheManager.getCacheStats()}")
                 } catch (e: Exception) {
                     Log.e(TAG, "Unable to get metadata due to error: ${e.message}")
                     // Ignore error and keep retrying
@@ -172,7 +184,7 @@ class AdMetadataTracker(
     }
 
     private fun onProgress(mpdTime: Long) {
-        if (currentTracking == null) return
+        if (currentAdBreak == null || currentAd == null || currentTracking == null) return
 
         // Check if playing at normal speed. We should not fire any beacon if player is fast-forwarding/rewinding
         val isPlayingAtNormalSpeed = playerAdapter.getPlaybackRate() in NORMAL_PLAYBACK_SPEED_RANGE
@@ -183,8 +195,14 @@ class AdMetadataTracker(
             val eventTime = event.startTime
             if (eventTime in mpdTime - EVENT_FIRING_TIME_RANGE_LOWER_LIMIT_MS .. mpdTime + EVENT_FIRING_TIME_RANGE_UPPER_LIMIT_MS && !event.fired) {
                 Log.d(TAG, "Got event update at position $mpdTime current Event: $curEvent new Event: ${event.event} ")
-                adProgressListeners.forEach { client -> client.onAdProgress(currentAdBreak!!, currentAd!!, event) }
+
+                // Mark as fired in the cache
                 event.fired = true
+                coroutineIOScope.launch {
+                    metadataCacheManager.markTrackingAsFired(event, currentAdBreak!!, currentAd!!)
+                }
+                
+                adProgressListeners.forEach { client -> client.onAdProgress(currentAdBreak!!, currentAd!!, event) }
                 curEvent = event.event
             }
         }

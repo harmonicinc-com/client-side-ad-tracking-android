@@ -5,5 +5,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 class InitResponse(
     val manifestUrl: String,
-    val trackingUrl: String
+    val trackingUrl: String?
 )

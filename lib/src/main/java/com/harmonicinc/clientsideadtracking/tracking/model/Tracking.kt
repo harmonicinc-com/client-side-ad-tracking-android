@@ -2,6 +2,7 @@ package com.harmonicinc.clientsideadtracking.tracking.model
 
 import com.harmonicinc.clientsideadtracking.tracking.extensions.toList
 import org.json.JSONObject
+import java.security.MessageDigest
 
 class Tracking(
     var event: Event = Event.UNKNOWN,
@@ -49,5 +50,24 @@ class Tracking(
             "clicktracking" -> Event.CLICK_TRACKING
             else -> Event.UNKNOWN
         }
+    }
+
+    /**
+     * Generate a unique identifier for this tracking event to maintain fired state
+     * across metadata updates and seeking operations
+     */
+    fun getUniqueId(): String {
+        val urlHash = if (url.isNotEmpty()) {
+            val urlString = url.sorted().joinToString("")
+            hashString(urlString)
+        } else {
+            "no_urls"
+        }
+        return "${startTime}_${event.name}_$urlHash"
+    }
+
+    private fun hashString(input: String): String {
+        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
+        return bytes.joinToString("") { "%02x".format(it) }.take(8) // Take first 8 chars for brevity
     }
 }

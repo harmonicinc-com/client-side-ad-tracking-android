@@ -88,7 +88,8 @@ Android 8.0 (API 26) or above
          omidCustomReferenceData?, // String?: OMID custom reference data in JSON string
          
          // Optional params:
-         initRequest // Boolean: Should the session init API be used?
+         initRequest, // Boolean: Should the session init API be used?
+         cacheRetentionTimeMs // Long: How long should beacon metadata be cached? (defaults to 2 hours: 2 * 60 * 60 * 1000L)
      )
      ```
    - Create a class that implements `PlayerAdapter`. Override all mandatory methods and return appropriate values from your player. The demo project includes an example [ExoPlayerAdapter.kt](demo%2Fsrc%2Fmain%2Fjava%2Fcom%2Fharmonicinc%2Fcsabdemo%2Fplayer%2FExoPlayerAdapter.kt) for your reference.
@@ -194,7 +195,7 @@ Android 8.0 (API 26) or above
      > When `playerView` is not provided, only PMM beacon tracking will be active. OMSDK verification, tracking overlays, and ad choices will be disabled since they require view access for viewability measurement.
 
 6. Stop the library after playback 
-   - Remember to clean the library after unloading the asset. Otherwise it will keep querying ads metadata.
+   - Remember to clean the library after unloading the asset. Otherwise it will keep querying ads metadata and the cached metadata will not be removed.
      ```kotlin
      adTrackingManager.cleanupAfterStop()
      ```
