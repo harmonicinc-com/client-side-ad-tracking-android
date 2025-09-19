@@ -6,4 +6,5 @@ object Constants {
     const val PMM_METADATA_START_QUERY_PARAM_KEY = "start"
     const val CSAT_INTENT_LOG_ACTION = "harmonicinc.csat.log"
     const val EXTRA_MESSAGE_KEY = "message"
+    const val DEFAULT_CACHE_RETENTION_TIME_MS = 2 * 60 * 60 * 1000L // 2 hours
 }

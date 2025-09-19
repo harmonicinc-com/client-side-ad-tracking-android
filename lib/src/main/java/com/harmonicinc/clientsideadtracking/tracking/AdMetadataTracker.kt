@@ -9,6 +9,7 @@ import com.harmonicinc.clientsideadtracking.tracking.model.AdBreak
 import com.harmonicinc.clientsideadtracking.tracking.model.EventManifest
 import com.harmonicinc.clientsideadtracking.tracking.model.Tracking
 import com.harmonicinc.clientsideadtracking.tracking.util.AdMetadataLoader
+import com.harmonicinc.clientsideadtracking.tracking.util.Constants.DEFAULT_CACHE_RETENTION_TIME_MS
 import com.harmonicinc.clientsideadtracking.tracking.util.DashHelper
 import com.harmonicinc.clientsideadtracking.tracking.util.MetadataCacheManager
 import kotlinx.coroutines.CoroutineScope
@@ -25,7 +26,7 @@ class AdMetadataTracker(
     private val okHttpService: OkHttpService,
     private val coroutineIOScope: CoroutineScope = CoroutineScope(Dispatchers.IO),
     private val coroutineMainScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
-    cacheRetentionTimeMs: Long = 2 * 60 * 60 * 1000L // Default: 2 hours
+    cacheRetentionTimeMs: Long = DEFAULT_CACHE_RETENTION_TIME_MS
 ) {
     private var progressJob: Job? = null
     private var metadataUpdateJob: Job? = null

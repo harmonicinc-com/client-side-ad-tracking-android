@@ -1,5 +1,7 @@
 package com.harmonicinc.clientsideadtracking
 
+import com.harmonicinc.clientsideadtracking.tracking.util.Constants.DEFAULT_CACHE_RETENTION_TIME_MS
+
 data class AdTrackingManagerParams(
     val descriptionUrl: String,
     val iconSupported: Boolean,
@@ -19,5 +21,5 @@ data class AdTrackingManagerParams(
     val omidCustomReferenceData: String?,
     // Optional params
     val initRequest: Boolean = true,
-    val cacheRetentionTimeMs: Long = 2 * 60 * 60 * 1000L
+    val cacheRetentionTimeMs: Long = DEFAULT_CACHE_RETENTION_TIME_MS
 )

@@ -5,6 +5,7 @@ import com.harmonicinc.clientsideadtracking.tracking.model.Ad
 import com.harmonicinc.clientsideadtracking.tracking.model.AdBreak
 import com.harmonicinc.clientsideadtracking.tracking.model.EventManifest
 import com.harmonicinc.clientsideadtracking.tracking.model.Tracking
+import com.harmonicinc.clientsideadtracking.tracking.util.Constants.DEFAULT_CACHE_RETENTION_TIME_MS
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
@@ -16,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Cache expiration is based on when ad breaks were first cached.
  */
 class MetadataCacheManager(
-    private val cacheRetentionTimeMs: Long = 2 * 60 * 60 * 1000L, // Default: 2 hours
+    private val cacheRetentionTimeMs: Long = DEFAULT_CACHE_RETENTION_TIME_MS,
     private val timeProvider: () -> Long = { System.currentTimeMillis() } // Injectable time provider for testing
 ) {
     private val TAG = "MetadataCacheManager"
