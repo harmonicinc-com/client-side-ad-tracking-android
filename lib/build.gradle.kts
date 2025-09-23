@@ -69,7 +69,6 @@ dependencies {
 
     // 3rd party libs
     implementation("com.google.android.gms:play-services-pal:20.1.1") {}
-    implementation("com.github.bumptech.glide:glide:4.16.0")
     implementation("com.google.android.tv:tv-ads:1.0.0")
     implementation("com.squareup.okhttp3:okhttp:$okhttpVersion")
     implementation("org.apache.httpcomponents.client5:httpclient5:5.2.1")

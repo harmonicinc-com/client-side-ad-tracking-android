@@ -2,6 +2,7 @@ package com.harmonicinc.clientsideadtracking.tracking.adchoices
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import android.view.LayoutInflater
@@ -12,7 +13,6 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.RelativeLayout
 import androidx.core.view.contains
-import com.bumptech.glide.Glide
 import com.github.harmonicinc.clientsideadtracking.R
 import com.google.android.tv.ads.AdsControlsManager
 import com.google.android.tv.ads.IconClickFallbackImages
@@ -22,6 +22,13 @@ import com.harmonicinc.clientsideadtracking.tracking.model.Ad
 import com.harmonicinc.clientsideadtracking.tracking.model.icon.Attributes
 import com.harmonicinc.clientsideadtracking.tracking.model.icon.iconclicks.IconClickFallbackImage
 import com.harmonicinc.clientsideadtracking.tracking.util.AndroidUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.IOException
 
 class AdChoiceManager(
     private val context: Context,
@@ -35,6 +42,10 @@ class AdChoiceManager(
     private var imageButton: ImageButton? = null
     private val tag = "AdChoiceManager"
     private val adsControlsManager = AdsControlsManager(context)
+    
+    // OkHttp client for image loading
+    private val okHttpClient = OkHttpClient()
+    private val imageLoadingScope = CoroutineScope(Dispatchers.IO)
 
     init {
         addListeners()
@@ -84,7 +95,10 @@ class AdChoiceManager(
 
         // Download AdChoice icon
         val imageButton = ImageButton(context)
-        Glide.with(context).load(adIcon.staticResource.uri).into(imageButton)
+        
+        // Load image using OkHttp
+        loadImageIntoView(adIcon.staticResource.uri, imageButton)
+        
         val relativeLayoutParams = RelativeLayout.LayoutParams(
             adIcon.attributes.width,
             adIcon.attributes.height,
@@ -155,7 +169,10 @@ class AdChoiceManager(
 
     private fun getIconFallbackImageView(fallbackImg: IconClickFallbackImage): ImageView {
         val imageView = ImageView(context)
-        Glide.with(context).load(fallbackImg.staticResource.uri).into(imageView)
+        
+        // Load image using OkHttp
+        loadImageIntoView(fallbackImg.staticResource.uri, imageView)
+        
         return imageView
     }
 
@@ -197,5 +214,34 @@ class AdChoiceManager(
                     .build()
             }
         ).build()
+    }
+    
+    /**
+     * Loads an image from a URL into an ImageView using OkHttp
+     */
+    private fun loadImageIntoView(url: String, imageView: ImageView) {
+        imageLoadingScope.launch {
+            try {
+                val request = Request.Builder()
+                    .url(url)
+                    .build()
+                
+                val response = okHttpClient.newCall(request).execute()
+                
+                if (response.isSuccessful) {
+                    response.body?.let { responseBody ->
+                        val bitmap = BitmapFactory.decodeStream(responseBody.byteStream())
+                        
+                        withContext(Dispatchers.Main) {
+                            imageView.setImageBitmap(bitmap)
+                        }
+                    }
+                } else {
+                    Log.e(tag, "Failed to load image: HTTP ${response.code}")
+                }
+            } catch (e: IOException) {
+                Log.e(tag, "Failed to load image from $url", e)
+            }
+        }
     }
 }
