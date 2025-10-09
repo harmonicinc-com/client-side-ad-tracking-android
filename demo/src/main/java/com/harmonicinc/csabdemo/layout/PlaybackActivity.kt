@@ -11,6 +11,8 @@ import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.harmonicinc.clientsideadtracking.AdTrackingManager
 import com.harmonicinc.clientsideadtracking.AdTrackingManagerParams
+import com.harmonicinc.clientsideadtracking.error.AdTrackingError
+import com.harmonicinc.clientsideadtracking.error.AdTrackingErrorListener
 import com.harmonicinc.csabdemo.player.ExoPlayerAdapter
 import com.harmonicinc.csabdemo.utils.MaterialUtils.showSnackbar
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -29,6 +31,23 @@ import kotlinx.coroutines.launch
         setContentView(R.layout.playback_activity)
         rootLayout = findViewById(R.id.root_layout)
         adTrackingManager = AdTrackingManager(this)
+        
+        // Set up error listener to log beacon errors
+        adTrackingManager.setErrorListener(object : AdTrackingErrorListener {
+            override fun onError(error: AdTrackingError) {
+                when (error) {
+                    is AdTrackingError.SessionInitError -> {
+                        showSnackbar("Ad tracking session initialization error (isRecoverable: ${error.errorIsRecoverable}): ${error.errorMessage}", rootLayout)
+                    }
+                    is AdTrackingError.BeaconError -> {
+                        showSnackbar("Beacon error: ${error.errorMessage}", rootLayout)
+                    }
+                    is AdTrackingError.MetadataError -> {
+                        showSnackbar("Metadata error: ${error.errorMessage}", rootLayout)
+                    }
+                }
+            }
+        })
 
         // Setup tabs & ExoPlayer
         val viewPager = findViewById<ViewPager2>(R.id.view_pager)

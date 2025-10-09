@@ -3,6 +3,8 @@ package com.harmonicinc.clientsideadtracking.tracking
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.harmonicinc.clientsideadtracking.OkHttpService
+import com.harmonicinc.clientsideadtracking.error.AdTrackingError
+import com.harmonicinc.clientsideadtracking.error.AdTrackingErrorListener
 import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
 import com.harmonicinc.clientsideadtracking.tracking.model.Ad
 import com.harmonicinc.clientsideadtracking.tracking.model.AdBreak
@@ -41,6 +43,7 @@ class AdMetadataTracker(
 
     private val adBreakListeners = CopyOnWriteArrayList<AdBreakListener>()
     private val adProgressListeners = CopyOnWriteArrayList<AdProgressListener>()
+    private var errorListener: AdTrackingErrorListener? = null
 
     private val metadataCacheManager = MetadataCacheManager(cacheRetentionTimeMs)
 
@@ -83,6 +86,10 @@ class AdMetadataTracker(
         adProgressListeners.addIfAbsent(listener)
     }
 
+    fun setErrorListener(listener: AdTrackingErrorListener?) {
+        errorListener = listener
+    }
+
     fun isPlayingAd(): Boolean {
         return currentAd != null
     }
@@ -97,6 +104,8 @@ class AdMetadataTracker(
                     eventRef.set(mergedManifest)
                     Log.d(TAG, "Updated manifest with merged data. Cache stats: ${metadataCacheManager.getCacheStats()}")
                 } catch (e: Exception) {
+                    val error = AdTrackingError.MetadataError("Unable to get metadata: ${e.message}", e)
+                    errorListener?.onError(error)
                     Log.e(TAG, "Unable to get metadata due to error: ${e.message}")
                     // Ignore error and keep retrying
                 } finally {

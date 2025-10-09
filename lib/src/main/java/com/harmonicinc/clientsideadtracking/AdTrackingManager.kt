@@ -15,6 +15,8 @@ import com.google.ads.interactivemedia.pal.NonceLoader
 import com.google.ads.interactivemedia.pal.NonceManager
 import com.google.ads.interactivemedia.pal.NonceRequest
 import com.google.android.tv.ads.SignalCollector
+import com.harmonicinc.clientsideadtracking.error.AdTrackingError
+import com.harmonicinc.clientsideadtracking.error.AdTrackingErrorListener
 import com.harmonicinc.clientsideadtracking.player.PlayerAdapter
 import com.harmonicinc.clientsideadtracking.player.PlayerEventListener
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
@@ -45,6 +47,7 @@ class AdTrackingManager(
     var omsdkClient: OMSDKClient? = null
     private var pmmClient: PMMClient? = null
     private var showOverlay = false
+    private var errorListener: AdTrackingErrorListener? = null
 
     private val urlFilenameRegex = Regex("[^/\\\\&?]+\\.\\w{3,4}(?=([?&].*\$|\$))")
     private val signalCollector = SignalCollector()
@@ -84,6 +87,12 @@ class AdTrackingManager(
                     val resolvedMetadataUrl = URL(baseUri, initResponse.trackingUrl)
                     metadataUrl = resolvedMetadataUrl.toString()
                 } catch (e: Exception) {
+                    val error = AdTrackingError.SessionInitError(
+                        "Error constructing metadataUrl from originalUrl '$manifestUrl' and trackingUrl '${initResponse.trackingUrl}'",
+                        e,
+                        true
+                    )
+                    errorListener?.onError(error)
                     Log.e(TAG, "Error constructing metadataUrl from originalUrl '$manifestUrl' and trackingUrl in initResponse '${initResponse.trackingUrl}': ${e.message}")
                 }
 
@@ -104,15 +113,28 @@ class AdTrackingManager(
 
                     this.manifestUrl = obtainedUrl.toString()
                 } catch (e: Exception) {
+                    val error = AdTrackingError.SessionInitError(
+                        "Error constructing manifestUrl from originalUrl '$manifestUrl' and manifestUrl '${initResponse.manifestUrl}'",
+                        e,
+                        true
+                    )
+                    errorListener?.onError(error)
                     Log.e(TAG, "Error constructing manifestUrl from originalUrl '$manifestUrl' and manifestUrl in initResponse '${initResponse.manifestUrl}': ${e.message}")
                 }
 
                 if (sessionId == null) {
+                    val error = AdTrackingError.SessionInitError("Session ID not found in init response", errorIsRecoverable = true)
+                    errorListener?.onError(error)
                     Log.w(TAG, "Session ID not found in init response")
                 } else {
                     Log.d(TAG, "Session ID found in init response: $sessionId")
                 }
             } else {
+                val error = AdTrackingError.SessionInitError(
+                    "Init request failed, falling back to redirect/parsing manifest",
+                    errorIsRecoverable = true
+                )
+                errorListener?.onError(error)
                 Log.w(TAG, "Init request failed, falling back to redirect/parsing manifest")
             }
         }
@@ -126,8 +148,20 @@ class AdTrackingManager(
                     this.manifestUrl = result.resolvedUrl
                     Log.d(TAG, "Resolved manifest URL: ${this.manifestUrl}")
                 }
+            } else {
+                val error = AdTrackingError.SessionInitError(
+                    "Failed to retrieve session ID and URL from manifest",
+                    errorIsRecoverable = false
+                )
+                errorListener?.onError(error)
             }
+            
             if (sessionId == null) {
+                val error = AdTrackingError.SessionInitError(
+                    "Unsupported SSAI stream - no session ID found",
+                    errorIsRecoverable = false
+                )
+                errorListener?.onError(error)
                 Log.w(TAG, "Unsupported SSAI stream")
                 return
             }
@@ -167,9 +201,11 @@ class AdTrackingManager(
         // Init tracking client
         this.playerAdapter = playerAdapter
         metadataTracker = AdMetadataTracker(playerAdapter, okHttpService, cacheRetentionTimeMs = params.cacheRetentionTimeMs)
+        metadataTracker.setErrorListener(errorListener)
         
         // Always initialize PMMClient for beacon tracking
         pmmClient = PMMClient(metadataTracker, okHttpService, context)
+        pmmClient!!.setErrorListener(errorListener)
         
         // Only initialize view-dependent components if playerView is provided
         if (playerView != null) {
@@ -253,6 +289,16 @@ class AdTrackingManager(
             trackingOverlay.showOverlay = state
         }
         showOverlay = state
+    }
+
+    /**
+     * Sets the error listener to receive callbacks when errors occur in the ad tracking system.
+     *
+     * @param listener The listener to receive error callbacks, or null to remove the listener
+     */
+    fun setErrorListener(listener: AdTrackingErrorListener?) {
+        this.errorListener = listener
+        // Error listener for child components will be set in onPlay()
     }
 
     private suspend fun generateNonceForAdRequest(params: AdTrackingManagerParams) {

@@ -200,6 +200,34 @@ Android 8.0 (API 26) or above
      adTrackingManager.cleanupAfterStop()
      ```
 
+7. **Error Handling (Optional)**
+   - You can optionally set an error listener to receive callbacks when errors occur in the ad tracking system.
+     ```kotlin
+     adTrackingManager.setErrorListener(object : AdTrackingErrorListener {
+         override fun onError(error: AdTrackingError) {
+             when (error) {
+                 is AdTrackingError.SessionInitError -> {
+                     // Handle session initialization errors (may be non-recoverable, check error.errorIsRecoverable)
+                     Log.e("AdTracking", "Initialization error: ${error.errorMessage}", error.errorCause)
+                 }
+                 is AdTrackingError.BeaconError -> {
+                     // Handle beacon sending errors
+                     Log.w("AdTracking", "Beacon error: Event=${error.event}, URL=${error.beaconUrl}, Message=${error.errorMessage}", error.errorCause)
+                 }
+                 is AdTrackingError.MetadataError -> {
+                     // Handle metadata errors
+                     Log.w("AdTracking", "Metadata error: ${error.errorMessage}", error.errorCause)
+                 }
+             }
+         }
+     })
+     ```
+   - **Available Error Types:**
+     - `SessionInitError`: Occurs during session initialization when URLs/session ID cannot be constructed properly. **(May be non-recoverable)**
+       - If the fallback implemented by the library also fails, then `error.errorIsRecoverable` will be `false`. Ad tracking will not be enabled.
+     - `BeaconError`: Occurs when a beacon request fails to be sent. Includes the beacon URL, event type, error message, and underlying cause.
+     - `MetadataError`: Occurs when ad metadata cannot be fetched or parsed. The library will fetch the metadata again after a set delay.
+
 ## Development
 ### Monitor traffic with Charles Proxy
 Follow below steps so traffic (especially HTTPS) can be proxied & decrypted by Charles
