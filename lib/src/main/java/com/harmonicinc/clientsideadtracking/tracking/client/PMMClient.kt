@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.harmonicinc.clientsideadtracking.OkHttpService
+import com.harmonicinc.clientsideadtracking.error.AdTrackingError
+import com.harmonicinc.clientsideadtracking.error.AdTrackingErrorListener
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
 import com.harmonicinc.clientsideadtracking.tracking.AdProgressListener
 import com.harmonicinc.clientsideadtracking.tracking.EventLogListener
@@ -29,6 +31,7 @@ class PMMClient(
 ) {
     private val TAG: String = "PMMClient"
     private var eventLogListener: EventLogListener? = null
+    private var errorListener: AdTrackingErrorListener? = null
 
     private var currentAdBreak: AdBreak? = null
     private var currentAd: Ad? = null
@@ -41,6 +44,10 @@ class PMMClient(
         eventLogListener = listener
     }
 
+    fun setErrorListener(listener: AdTrackingErrorListener?) {
+        errorListener = listener
+    }
+
     private suspend fun sendBeacon(urls: List<String>, event: Tracking.Event) {
         Log.d(TAG, "sendBeacon: sending ${urls.size} beacons for ${event.name}")
         withContext(ioDispatcher) {
@@ -50,6 +57,13 @@ class PMMClient(
                     okHttpService.getString(url)
                     Log.d(TAG, "Beacon sent successfully for ${event.name}: $url")
                 } catch (e: Exception) {
+                    val error = AdTrackingError.BeaconError(
+                        beaconUrl = url,
+                        event = event.name,
+                        errorMessage = "Failed to send beacon",
+                        errorCause = e
+                    )
+                    errorListener?.onError(error)
                     Log.e(TAG, "Failed to send beacon for ${event.name}: $url", e)
                 }
             }
