@@ -16,7 +16,9 @@ class PlayedRangeTracker(
     private val cacheRetentionTimeMs: Long,
     private val positionTrackingIntervalMs: Long = 500L // 500 ms tolerance for continuity
 ) {
-    private val TAG = "PlayedRangeTracker"
+    companion object {
+        private const val TAG = "PlayedRangeTracker"
+    }
     
     data class TimeRange(var start: Long, var end: Long) {
         fun contains(time: Long) = time in start..end

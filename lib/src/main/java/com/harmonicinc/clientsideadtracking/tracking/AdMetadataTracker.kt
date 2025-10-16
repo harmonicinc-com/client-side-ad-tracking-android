@@ -132,9 +132,7 @@ class AdMetadataTracker(
                 // Track played position if playing at normal speed and not paused
                 val isPlayingAtNormalSpeed = playerAdapter.getPlaybackRate() in NORMAL_PLAYBACK_SPEED_RANGE
                 if (isPlayingAtNormalSpeed && !playerAdapter.isPaused()) {
-                    coroutineIOScope.launch {
-                        playedRangeTracker.trackPosition(mpdTime)
-                    }
+                    playedRangeTracker.trackPosition(mpdTime)
                 }
                 
                 updateCurrentAds(mpdTime)
@@ -241,26 +239,36 @@ class AdMetadataTracker(
     private suspend fun fireWatchedEvents() {
         val event = eventRef.get() ?: return
         
+        // Collect all unfired events first
+        data class UnfiredEvent(val adBreak: AdBreak, val ad: Ad, val tracking: Tracking)
+        val unfiredEvents = mutableListOf<UnfiredEvent>()
+        
         event.adBreaks.forEach { adBreak ->
             adBreak.ads.forEach { ad ->
                 ad.tracking.forEach { tracking ->
-                    // Only check unfired events
                     if (!tracking.fired) {
-                        // Check if this event's time was actually played
-                        if (playedRangeTracker.wasTimePlayed(tracking.startTime)) {
-                            Log.d(TAG, "Firing late beacon for played event ${tracking.event} at ${tracking.startTime}")
-                            
-                            // Mark as fired in memory and cache
-                            tracking.fired = true
-                            metadataCacheManager.markTrackingAsFired(tracking, adBreak, ad)
-                            
-                            // Fire the beacon on main thread
-                            coroutineMainScope.launch {
-                                adProgressListeners.forEach { client ->
-                                    client.onAdProgress(adBreak, ad, tracking)
-                                }
-                            }
-                        }
+                        unfiredEvents.add(UnfiredEvent(adBreak, ad, tracking))
+                    }
+                }
+            }
+        }
+        
+        // Check played times for all unfired events
+        unfiredEvents.forEach { unfiredEvent ->
+            val (adBreak, ad, tracking) = unfiredEvent
+            
+            // Check if this event's time was actually played
+            if (playedRangeTracker.wasTimePlayed(tracking.startTime)) {
+                Log.d(TAG, "Firing late beacon for played event ${tracking.event} at ${tracking.startTime}")
+                
+                // Mark as fired in memory and cache
+                tracking.fired = true
+                metadataCacheManager.markTrackingAsFired(tracking, adBreak, ad)
+                
+                // Fire the beacon on main thread
+                coroutineMainScope.launch {
+                    adProgressListeners.forEach { client ->
+                        client.onAdProgress(adBreak, ad, tracking)
                     }
                 }
             }
