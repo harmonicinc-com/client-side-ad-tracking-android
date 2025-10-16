@@ -1,6 +1,7 @@
 package com.harmonicinc.clientsideadtracking
 
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.DEFAULT_CACHE_RETENTION_TIME_MS
+import com.harmonicinc.clientsideadtracking.tracking.util.Constants.DEFAULT_METADATA_FETCH_INTERVAL_MS
 
 data class AdTrackingManagerParams(
     val descriptionUrl: String,
@@ -21,5 +22,6 @@ data class AdTrackingManagerParams(
     val omidCustomReferenceData: String?,
     // Optional params
     val initRequest: Boolean = true,
-    val cacheRetentionTimeMs: Long = DEFAULT_CACHE_RETENTION_TIME_MS
+    val cacheRetentionTimeMs: Long = DEFAULT_CACHE_RETENTION_TIME_MS,
+    val metadataFetchIntervalMs: Long = DEFAULT_METADATA_FETCH_INTERVAL_MS
 )

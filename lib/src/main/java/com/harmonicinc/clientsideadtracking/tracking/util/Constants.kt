@@ -7,4 +7,5 @@ object Constants {
     const val CSAT_INTENT_LOG_ACTION = "harmonicinc.csat.log"
     const val EXTRA_MESSAGE_KEY = "message"
     const val DEFAULT_CACHE_RETENTION_TIME_MS = 2 * 60 * 60 * 1000L // 2 hours
+    const val DEFAULT_METADATA_FETCH_INTERVAL_MS = 2000L // 2 seconds
 }

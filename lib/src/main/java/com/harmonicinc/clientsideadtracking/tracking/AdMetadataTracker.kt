@@ -12,8 +12,10 @@ import com.harmonicinc.clientsideadtracking.tracking.model.EventManifest
 import com.harmonicinc.clientsideadtracking.tracking.model.Tracking
 import com.harmonicinc.clientsideadtracking.tracking.util.AdMetadataLoader
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.DEFAULT_CACHE_RETENTION_TIME_MS
+import com.harmonicinc.clientsideadtracking.tracking.util.Constants.DEFAULT_METADATA_FETCH_INTERVAL_MS
 import com.harmonicinc.clientsideadtracking.tracking.util.DashHelper
 import com.harmonicinc.clientsideadtracking.tracking.util.MetadataCacheManager
+import com.harmonicinc.clientsideadtracking.tracking.util.PlayedRangeTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,7 +30,8 @@ class AdMetadataTracker(
     private val okHttpService: OkHttpService,
     private val coroutineIOScope: CoroutineScope = CoroutineScope(Dispatchers.IO),
     private val coroutineMainScope: CoroutineScope = CoroutineScope(Dispatchers.Main),
-    cacheRetentionTimeMs: Long = DEFAULT_CACHE_RETENTION_TIME_MS
+    private val cacheRetentionTimeMs: Long = DEFAULT_CACHE_RETENTION_TIME_MS,
+    private val metadataFetchIntervalMs: Long = DEFAULT_METADATA_FETCH_INTERVAL_MS
 ) {
     private var progressJob: Job? = null
     private var metadataUpdateJob: Job? = null
@@ -46,6 +49,7 @@ class AdMetadataTracker(
     private var errorListener: AdTrackingErrorListener? = null
 
     private val metadataCacheManager = MetadataCacheManager(cacheRetentionTimeMs)
+    private val playedRangeTracker = PlayedRangeTracker(cacheRetentionTimeMs)
 
     private val NORMAL_PLAYBACK_SPEED_RANGE = 0.95..1.05
     private val TAG = "AdMetadataTracker"
@@ -56,7 +60,6 @@ class AdMetadataTracker(
     // Assume ad break ends later than advertised due to delayed metadata response
     // If the value is too small, then the tracker thinks the ad break has ended and will destroy the session
     private val ADBREAK_END_TIME_TOLERANCE_MS = 500
-    private val METADATA_FETCH_INTERVAL_MS = 2000L
     private val POST_PROGRESS_INTERVAL_MS = 100L
 
     // Should only be triggered once after user attempts to play an asset
@@ -72,9 +75,10 @@ class AdMetadataTracker(
         progressJob?.cancel()
         metadataUpdateJob?.cancel()
         
-        // Clear cache on stop
+        // Clear cache and played ranges on stop
         coroutineIOScope.launch {
             metadataCacheManager.clear()
+            playedRangeTracker.clear()
         }
     }
 
@@ -103,13 +107,16 @@ class AdMetadataTracker(
                     val mergedManifest = metadataCacheManager.mergeEventManifest(newManifest)
                     eventRef.set(mergedManifest)
                     Log.d(TAG, "Updated manifest with merged data. Cache stats: ${metadataCacheManager.getCacheStats()}")
+                    
+                    // Fire beacons for any watched events after metadata update
+                    fireWatchedEvents()
                 } catch (e: Exception) {
                     val error = AdTrackingError.MetadataError("Unable to get metadata: ${e.message}", e)
                     errorListener?.onError(error)
                     Log.e(TAG, "Unable to get metadata due to error: ${e.message}")
                     // Ignore error and keep retrying
                 } finally {
-                    delay(METADATA_FETCH_INTERVAL_MS)
+                    delay(metadataFetchIntervalMs)
                 }
             }
         }
@@ -121,6 +128,15 @@ class AdMetadataTracker(
             while (isActive) {
                 delay(POST_PROGRESS_INTERVAL_MS)
                 val mpdTime = DashHelper.getMpdTimeMs(playerAdapter)
+                
+                // Track played position if playing at normal speed and not paused
+                val isPlayingAtNormalSpeed = playerAdapter.getPlaybackRate() in NORMAL_PLAYBACK_SPEED_RANGE
+                if (isPlayingAtNormalSpeed && !playerAdapter.isPaused()) {
+                    coroutineIOScope.launch {
+                        playedRangeTracker.trackPosition(mpdTime)
+                    }
+                }
+                
                 updateCurrentAds(mpdTime)
                 onProgress(mpdTime)
             }
@@ -213,6 +229,40 @@ class AdMetadataTracker(
                 
                 adProgressListeners.forEach { client -> client.onAdProgress(currentAdBreak!!, currentAd!!, event) }
                 curEvent = event.event
+            }
+        }
+    }
+    
+    /**
+     * Fire beacons for any events that occurred during played time ranges.
+     * This is called after metadata updates to catch events that may have been missed
+     * due to delayed metadata arrival.
+     */
+    private suspend fun fireWatchedEvents() {
+        val event = eventRef.get() ?: return
+        
+        event.adBreaks.forEach { adBreak ->
+            adBreak.ads.forEach { ad ->
+                ad.tracking.forEach { tracking ->
+                    // Only check unfired events
+                    if (!tracking.fired) {
+                        // Check if this event's time was actually played
+                        if (playedRangeTracker.wasTimePlayed(tracking.startTime)) {
+                            Log.d(TAG, "Firing late beacon for played event ${tracking.event} at ${tracking.startTime}")
+                            
+                            // Mark as fired in memory and cache
+                            tracking.fired = true
+                            metadataCacheManager.markTrackingAsFired(tracking, adBreak, ad)
+                            
+                            // Fire the beacon on main thread
+                            coroutineMainScope.launch {
+                                adProgressListeners.forEach { client ->
+                                    client.onAdProgress(adBreak, ad, tracking)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
