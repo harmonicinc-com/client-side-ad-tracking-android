@@ -95,16 +95,27 @@ class OkHttpService(
             if (isRedirect(response.code) && response.headers["location"] != null) {
                 val redirectUrl = response.headers["location"]!!
                 val resolvedUrl = resolveUrl(originalUrl, redirectUrl)
-                val redirectReq = Request.Builder()
-                    .url(resolvedUrl)
-                    .method(request.method, request.body)
-                    .build()
+                val redirectReqBuilder = Request.Builder().url(resolvedUrl)
+                val redirectCode = response.code
+                if ((redirectCode == 301 || redirectCode == 302) && request.method.equals("POST", ignoreCase = true)) {
+                    // For 301/302, change POST to GET and drop the body
+                    redirectReqBuilder.get()
+                } else {
+                    // For 307/308, preserve method and body
+                    redirectReqBuilder.method(request.method, request.body)
+                }
+                val redirectReq = redirectReqBuilder.build()
                 
                 client.newCall(redirectReq).execute().use { redirectResponse ->
                     if (redirectResponse.code == HttpURLConnection.HTTP_OK) {
                         val body = redirectResponse.body?.string()
                         if (body != null) {
                             return parser(body)
+                        } else {
+                            Log.e(
+                                "OkHttpService",
+                                "Redirect request to $resolvedUrl failed with status code ${redirectResponse.code}: ${redirectResponse.message}"
+                            )
                         }
                     }
                 }
