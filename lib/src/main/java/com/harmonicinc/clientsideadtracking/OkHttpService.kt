@@ -23,7 +23,7 @@ class OkHttpService(
         val req = Request.Builder().url(url).build()
         client.newCall(req).execute().use { response ->
             // First check for redirects
-            if ((response.code == HttpURLConnection.HTTP_MOVED_PERM || response.code == HttpURLConnection.HTTP_MOVED_TEMP) && response.headers["location"] != null) {
+            if (isRedirect(response.code) && response.headers["location"] != null) {
                 val redirectUrl = response.headers["location"]!!
                 val resolvedUrl = resolveUrl(url, redirectUrl)
                 val queryList = getSessionIdFromUrl(resolvedUrl)
@@ -47,75 +47,86 @@ class OkHttpService(
         val getUrl = URIBuilder(url).addParameter("initSession", "true").build().toString()
         val getReq = Request.Builder().url(getUrl).build()
         
-        client.newCall(getReq).execute().use { response ->
-            // Handle redirects
-            if ((response.code == HttpURLConnection.HTTP_MOVED_PERM || response.code == HttpURLConnection.HTTP_MOVED_TEMP) && response.headers["location"] != null) {
+        val getResult = executeRequestWithRedirect(getReq, getUrl) { body ->
+            try {
+                Json.decodeFromString<InitResponse>(body)
+            } catch (e: Exception) {
+                Log.d("OkHttpService", "GET request response could not be parsed as InitResponse, falling back to POST: ${e.message}")
+                null
+            }
+        }
+        
+        if (getResult != null) {
+            return@withContext getResult
+        }
+        
+        // Fallback to POST request
+        val postReq = Request.Builder().url(url).post("".toRequestBody()).build()
+        val postResult = executeRequestWithRedirect(postReq, url) { body ->
+            try {
+                Json.decodeFromString<InitResponse>(body)
+            } catch (e: Exception) {
+                Log.e("OkHttpService", "Failed to decode POST response: ${e.message}", e)
+                null
+            }
+        }
+        
+        if (postResult == null) {
+            Log.e("OkHttpService", "Init POST request failed")
+        }
+        
+        return@withContext postResult
+    }
+
+    /**
+     * Executes an HTTP request and handles one level of redirect (301/302/307/308).
+     * @param request The initial request to execute
+     * @param originalUrl The original URL for the request (used for redirect resolution)
+     * @param parser Function to parse the response body into the desired type
+     * @return The parsed result or null if the request failed or parsing failed
+     */
+    private fun <T> executeRequestWithRedirect(
+        request: Request,
+        originalUrl: String,
+        parser: (String) -> T?
+    ): T? {
+        client.newCall(request).execute().use { response ->
+            // Handle redirects (301, 302, 307, 308)
+            if (isRedirect(response.code) && response.headers["location"] != null) {
                 val redirectUrl = response.headers["location"]!!
-                val resolvedUrl = resolveUrl(getUrl, redirectUrl)
-                val redirectReq = Request.Builder().url(resolvedUrl).build()
+                val resolvedUrl = resolveUrl(originalUrl, redirectUrl)
+                val redirectReq = Request.Builder()
+                    .url(resolvedUrl)
+                    .method(request.method, request.body)
+                    .build()
                 
                 client.newCall(redirectReq).execute().use { redirectResponse ->
                     if (redirectResponse.code == HttpURLConnection.HTTP_OK) {
                         val body = redirectResponse.body?.string()
                         if (body != null) {
-                            try {
-                                return@withContext Json.decodeFromString<InitResponse>(body)
-                            } catch (e: Exception) {
-                                Log.d("OkHttpService", "GET redirect response could not be parsed: ${e.message}")
-                            }
+                            return parser(body)
                         }
                     }
                 }
             } else if (response.code == HttpURLConnection.HTTP_OK) {
                 val body = response.body?.string()
                 if (body != null) {
-                    try {
-                        return@withContext Json.decodeFromString<InitResponse>(body)
-                    } catch (e: Exception) {
-                        Log.d("OkHttpService", "GET request response could not be parsed as InitResponse, falling back to POST: ${e.message}")
-                        // Continue to POST fallback
-                    }
+                    return parser(body)
                 }
             }
         }
-        
-        // Fallback to POST request
-        val postReq = Request.Builder().url(url).post("".toRequestBody()).build()
-        client.newCall(postReq).execute().use { response ->
-            // Handle redirects for POST
-            if ((response.code == HttpURLConnection.HTTP_MOVED_PERM || response.code == HttpURLConnection.HTTP_MOVED_TEMP) && response.headers["location"] != null) {
-                val redirectUrl = response.headers["location"]!!
-                val resolvedUrl = resolveUrl(url, redirectUrl)
-                val redirectReq = Request.Builder().url(resolvedUrl).post("".toRequestBody()).build()
-                
-                client.newCall(redirectReq).execute().use { redirectResponse ->
-                    if (redirectResponse.code == HttpURLConnection.HTTP_OK) {
-                        val body = redirectResponse.body?.string()
-                        return@withContext if (body != null) {
-                            try {
-                                Json.decodeFromString<InitResponse>(body)
-                            } catch (e: Exception) {
-                                Log.e("OkHttpService", "Failed to decode POST redirect response: ${e.message}", e)
-                                null
-                            }
-                        } else null
-                    }
-                }
-            } else if (response.code == HttpURLConnection.HTTP_OK) {
-                val body = response.body?.string()
-                return@withContext if (body != null) {
-                    try {
-                        Json.decodeFromString<InitResponse>(body)
-                    } catch (e: Exception) {
-                        Log.e("OkHttpService", "Failed to decode POST response: ${e.message}", e)
-                        null
-                    }
-                } else null
-            } else {
-                Log.e("OkHttpService", "Init POST request failed with status code: ${response.code}")
-            }
-            return@withContext null
-        }
+        return null
+    }
+
+    /**
+     * Checks if the HTTP status code is a redirect.
+     * Supports: 301 (Moved Permanently), 302 (Found), 307 (Temporary Redirect), 308 (Permanent Redirect)
+     */
+    private fun isRedirect(code: Int): Boolean {
+        return code == HttpURLConnection.HTTP_MOVED_PERM ||  // 301
+               code == HttpURLConnection.HTTP_MOVED_TEMP ||  // 302
+               code == 307 ||                                 // Temporary Redirect
+               code == 308                                    // Permanent Redirect
     }
 
     suspend fun getString(url: String): String = withContext(coroutineContext) {
