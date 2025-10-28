@@ -99,6 +99,13 @@ class AdTrackingManagerTest {
             .setResponseCode(HttpURLConnection.HTTP_MOVED_PERM)
             .addHeader("location", "$baseUrl?$SESSION_ID_QUERY_PARAM_KEY=$expectSessId")
         mockWebServer.enqueue(mockResponse)
+
+        // Enqueue the final response after redirect (empty manifest body is fine for this test)
+        val finalResponse = MockResponse()
+            .setResponseCode(HttpURLConnection.HTTP_OK)
+            .setBody("")
+        mockWebServer.enqueue(finalResponse)
+
         every { nonceManager.nonce } returns expectNonce
         every { nonceLoader.loadNonceManager(any()) } returns getFakeTask(nonceManager)
 
@@ -145,12 +152,65 @@ class AdTrackingManagerTest {
     }
 
     @Test
+    fun testInitRequestWithRedirect() = runTest(timeout = 10.seconds) {
+        val expectSessId = "testSessId"
+        val expectNonce = "testNonce"
+        val baseUrl = mockWebServer.url("/master.mpd").toString()
+        val redirectedUrl = mockWebServer.url("/redirected/path/master.mpd").toString()
+
+        // Enqueue redirect response for the init request
+        val redirectResponse = MockResponse()
+            .setResponseCode(HttpURLConnection.HTTP_MOVED_PERM)
+            .addHeader("Location", redirectedUrl)
+        mockWebServer.enqueue(redirectResponse)
+
+        // Enqueue the final init response with relative URLs
+        val testInitResponse = InitResponse(
+            manifestUrl = "manifest.mpd?$SESSION_ID_QUERY_PARAM_KEY=$expectSessId",
+            trackingUrl = "tracking?$SESSION_ID_QUERY_PARAM_KEY=$expectSessId"
+        )
+        val finalResponse = MockResponse()
+            .setResponseCode(HttpURLConnection.HTTP_OK)
+            .setBody(Json.encodeToString(InitResponse.serializer(), testInitResponse))
+        mockWebServer.enqueue(finalResponse)
+
+        every { nonceManager.nonce } returns expectNonce
+        every { nonceLoader.loadNonceManager(any()) } returns getFakeTask(nonceManager)
+
+        val newAdTrackingParams = adTrackingParams.copy(
+            initRequest = true,
+        )
+
+        val adTrackingManager = AdTrackingManager(activity, nonceLoader, OkHttpService())
+        adTrackingManager.prepareBeforeLoad(baseUrl, newAdTrackingParams)
+        assertTrue(adTrackingManager.isSSAISupported())
+
+        // Verify that the obtained manifest URL was resolved against the redirected base URL
+        val obtainedManifestUrl = adTrackingManager.getObtainedManifestUrl()
+        assertTrue(obtainedManifestUrl!!.contains("/redirected/path/"))
+        assertTrue(obtainedManifestUrl.contains("manifest.mpd"))
+        assertTrue(obtainedManifestUrl.contains("$SESSION_ID_QUERY_PARAM_KEY=$expectSessId"))
+
+        // Verify nonce and session ID are properly appended
+        val actualUrls = adTrackingManager.appendNonceToUrl(listOf(baseUrl))
+        assertTrue(actualUrls.isNotEmpty())
+        assertTrue(actualUrls[0].contains("$PAL_NONCE_QUERY_PARAM_KEY=$expectNonce"))
+        assertTrue(actualUrls[0].contains("$SESSION_ID_QUERY_PARAM_KEY=$expectSessId"))
+    }
+
+    @Test
     fun testSubscribePlayerEvents() = runTest(timeout = 10.seconds){
         val baseUrl = mockWebServer.url("/master.mpd").toString()
         val mockResponse = MockResponse()
             .setResponseCode(HttpURLConnection.HTTP_MOVED_PERM)
             .addHeader("location", "$baseUrl?$SESSION_ID_QUERY_PARAM_KEY=")
         mockWebServer.enqueue(mockResponse)
+
+        // Enqueue the final response after redirect (empty manifest body is fine for this test)
+        val finalResponse = MockResponse()
+            .setResponseCode(HttpURLConnection.HTTP_OK)
+            .setBody("")
+        mockWebServer.enqueue(finalResponse)
 
         mockkConstructor(AdTrackingManager::class)
         every { nonceManager.nonce } returns ""

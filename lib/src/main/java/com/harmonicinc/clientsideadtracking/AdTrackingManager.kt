@@ -28,7 +28,6 @@ import com.harmonicinc.clientsideadtracking.tracking.util.Constants
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_NONCE_QUERY_PARAM_KEY
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
 import com.iab.omid.library.harmonicinc.Omid
-import java.net.URL
 import kotlinx.coroutines.tasks.await
 
 class AdTrackingManager(
@@ -77,53 +76,34 @@ class AdTrackingManager(
         this.manifestUrl = manifestUrl
         this.params = params
 
+        // Set error listener on OkHttpService
+        okHttpService.setErrorListener(errorListener)
+
         if (params.initRequest) {
-            val baseUri = URL(manifestUrl)
             val initResponse = okHttpService.getInitResponse(manifestUrl)
             if (initResponse != null) {
                 Log.d(TAG, "Obtained URLs from init request API. manifest: ${initResponse.manifestUrl}, metadata: ${initResponse.trackingUrl}")
 
-                try {
-                    val resolvedMetadataUrl = URL(baseUri, initResponse.trackingUrl)
-                    metadataUrl = resolvedMetadataUrl.toString()
-                } catch (e: Exception) {
-                    val error = AdTrackingError.SessionInitError(
-                        "Error constructing metadataUrl from originalUrl '$manifestUrl' and trackingUrl '${initResponse.trackingUrl}'",
-                        e,
-                        true
-                    )
-                    errorListener?.onError(error)
-                    Log.e(TAG, "Error constructing metadataUrl from originalUrl '$manifestUrl' and trackingUrl in initResponse '${initResponse.trackingUrl}': ${e.message}")
-                }
+                // URLs are already resolved by OkHttpService
+                metadataUrl = initResponse.trackingUrl
+                val obtainedUrl = initResponse.manifestUrl.toUri()
+                sessionId = obtainedUrl.getQueryParameter(SESSION_ID_QUERY_PARAM_KEY)
 
-                val obtainedUrl: Uri?
-                try {
-                    val resolvedManifestUrl = URL(baseUri, initResponse.manifestUrl)
-                    obtainedUrl = resolvedManifestUrl.toString().toUri()
-
-                    sessionId = obtainedUrl.getQueryParameter(SESSION_ID_QUERY_PARAM_KEY)
-
-                    // There may be other query params in the init response that need to be passed on.
-                    obtainedUrl.queryParameterNames.forEach { name ->
-                        // Skip session ID
-                        if (name != SESSION_ID_QUERY_PARAM_KEY) {
-                            obtainedQueryParams[name] = obtainedUrl.getQueryParameter(name) ?: ""
-                        }
+                // Store all query parameters from the obtained URL
+                for (paramName in obtainedUrl.queryParameterNames) {
+                    val paramValue = obtainedUrl.getQueryParameter(paramName)
+                    if (paramValue != null) {
+                        obtainedQueryParams[paramName] = paramValue
                     }
-
-                    this.manifestUrl = obtainedUrl.toString()
-                } catch (e: Exception) {
-                    val error = AdTrackingError.SessionInitError(
-                        "Error constructing manifestUrl from originalUrl '$manifestUrl' and manifestUrl '${initResponse.manifestUrl}'",
-                        e,
-                        true
-                    )
-                    errorListener?.onError(error)
-                    Log.e(TAG, "Error constructing manifestUrl from originalUrl '$manifestUrl' and manifestUrl in initResponse '${initResponse.manifestUrl}': ${e.message}")
                 }
+                
+                this.manifestUrl = obtainedUrl.toString()
 
                 if (sessionId == null) {
-                    val error = AdTrackingError.SessionInitError("Session ID not found in init response", errorIsRecoverable = true)
+                    val error = AdTrackingError.SessionInitError(
+                        "Session ID not found in init response, falling back to redirect/parsing manifest",
+                        errorIsRecoverable = true
+                    )
                     errorListener?.onError(error)
                     Log.w(TAG, "Session ID not found in init response")
                 } else {
@@ -265,7 +245,9 @@ class AdTrackingManager(
 
             if (obtainedQueryParams.isNotEmpty()) {
                 obtainedQueryParams.forEach { (key, value) ->
-                    builder.appendQueryParameter(key, value)
+                    if (uri.getQueryParameter(key) == null) {
+                        builder.appendQueryParameter(key, value)
+                    }
                 }
             }
 
@@ -303,6 +285,8 @@ class AdTrackingManager(
      */
     fun setErrorListener(listener: AdTrackingErrorListener?) {
         this.errorListener = listener
+        // Propagate error listener to OkHttpService if it's already been used
+        okHttpService.setErrorListener(listener)
         // Error listener for child components will be set in onPlay()
     }
 
