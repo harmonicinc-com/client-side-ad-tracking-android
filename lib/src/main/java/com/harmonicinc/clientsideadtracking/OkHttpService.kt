@@ -1,6 +1,8 @@
 package com.harmonicinc.clientsideadtracking
 
 import android.util.Log
+import com.harmonicinc.clientsideadtracking.error.AdTrackingError
+import com.harmonicinc.clientsideadtracking.error.AdTrackingErrorListener
 import com.harmonicinc.clientsideadtracking.model.SessionResult
 import com.harmonicinc.clientsideadtracking.tracking.model.InitResponse
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
@@ -17,25 +19,63 @@ import kotlin.coroutines.CoroutineContext
 class OkHttpService(
     private val coroutineContext: CoroutineContext = Dispatchers.IO
 ) {
-    private val client = OkHttpClient.Builder().followRedirects(false).build()
+    private val client = OkHttpClient.Builder().followRedirects(true).build()
+    private var errorListener: AdTrackingErrorListener? = null
+
+    fun setErrorListener(listener: AdTrackingErrorListener?) {
+        this.errorListener = listener
+    }
 
     suspend fun getSessionIdAndUrl(url: String): SessionResult? = withContext(coroutineContext) {
         val req = Request.Builder().url(url).build()
         client.newCall(req).execute().use { response ->
-            // First check for redirects
-            if ((response.code == HttpURLConnection.HTTP_MOVED_PERM || response.code == HttpURLConnection.HTTP_MOVED_TEMP) && response.headers["location"] != null) {
-                val redirectUrl = response.headers["location"]!!
-                val resolvedUrl = resolveUrl(url, redirectUrl)
-                val queryList = getSessionIdFromUrl(resolvedUrl)
-                return@withContext if (queryList.isNotEmpty()) SessionResult(queryList[0], resolvedUrl) else null
-            }
-            
-            // If no redirect, parse the manifest content
             if (response.code == HttpURLConnection.HTTP_OK) {
-                val body = response.body?.string()
-                if (body != null) {
-                    return@withContext parseSessionFromManifest(body, url)
+                val finalUrl = response.request.url.toString()
+                val wasRedirected = finalUrl != url
+                
+                if (wasRedirected) {
+                    // Check if session ID is in the redirected URL
+                    val queryList = getSessionIdFromUrl(finalUrl)
+                    if (queryList.isEmpty()) {
+                        val error = AdTrackingError.SessionInitError(
+                            errorMessage = "Session ID not found in redirected URL: $finalUrl",
+                            errorIsRecoverable = false
+                        )
+                        errorListener?.onError(error)
+                        Log.e("OkHttpService", error.message)
+                        return@withContext null
+                    }
+                    return@withContext SessionResult(queryList[0], finalUrl)
+                } else {
+                    // Parse the manifest content to extract session info
+                    val body = response.body?.string()
+                    if (body != null) {
+                        val result = parseSessionFromManifest(body, finalUrl)
+                        if (result == null) {
+                            val error = AdTrackingError.SessionInitError(
+                                errorMessage = "Failed to parse session from manifest",
+                                errorIsRecoverable = false
+                            )
+                            errorListener?.onError(error)
+                            Log.e("OkHttpService", error.message)
+                        }
+                        return@withContext result
+                    } else {
+                        val error = AdTrackingError.SessionInitError(
+                            errorMessage = "Empty response body when fetching manifest",
+                            errorIsRecoverable = false
+                        )
+                        errorListener?.onError(error)
+                        Log.e("OkHttpService", error.message)
+                    }
                 }
+            } else {
+                val error = AdTrackingError.SessionInitError(
+                    errorMessage = "HTTP request failed with status code: ${response.code}",
+                    errorIsRecoverable = false
+                )
+                errorListener?.onError(error)
+                Log.e("OkHttpService", error.message)
             }
             
             return@withContext null
@@ -49,35 +89,82 @@ class OkHttpService(
         
         client.newCall(getReq).execute().use { response ->
             if (response.code == HttpURLConnection.HTTP_OK) {
+                val finalUrl = response.request.url.toString()
                 val body = response.body?.string()
                 if (body != null) {
                     try {
-                        return@withContext Json.decodeFromString<InitResponse>(body)
+                        val initResponse = Json.decodeFromString<InitResponse>(body)
+                        // Resolve relative URLs against the final (possibly redirected) URL
+                        return@withContext resolveInitResponseUrls(initResponse, finalUrl)
                     } catch (e: Exception) {
                         Log.d("OkHttpService", "GET request response could not be parsed as InitResponse, falling back to POST: ${e.message}")
+                        val error = AdTrackingError.SessionInitError(
+                            errorMessage = "Failed to decode init response from GET request",
+                            errorCause = e,
+                            errorIsRecoverable = true
+                        )
+                        errorListener?.onError(error)
                         // Continue to POST fallback
                     }
+                } else {
+                    Log.d("OkHttpService", "GET request returned empty body, falling back to POST")
+                    val error = AdTrackingError.SessionInitError(
+                        errorMessage = "Empty response body from init GET request",
+                        errorIsRecoverable = true
+                    )
+                    errorListener?.onError(error)
+                    // Continue to POST fallback
                 }
+            } else {
+                Log.d("OkHttpService", "GET request failed with status ${response.code}, falling back to POST")
+                val error = AdTrackingError.SessionInitError(
+                    errorMessage = "Init GET request failed with status code: ${response.code}",
+                    errorIsRecoverable = true
+                )
+                errorListener?.onError(error)
+                // Continue to POST fallback
             }
         }
         
         // Fallback to POST request
         val postReq = Request.Builder().url(url).post("".toRequestBody()).build()
-        client.newCall(postReq).execute().use {
-            if (it.code == HttpURLConnection.HTTP_OK) {
-                val body = it.body?.string()
-                return@withContext if (body != null) {
+        client.newCall(postReq).execute().use { response ->
+            if (response.code == HttpURLConnection.HTTP_OK) {
+                val finalUrl = response.request.url.toString()
+                val body = response.body?.string()
+                if (body != null) {
                     try {
-                        Json.decodeFromString<InitResponse>(body)
+                        val initResponse = Json.decodeFromString<InitResponse>(body)
+                        // Resolve relative URLs against the final (possibly redirected) URL
+                        return@withContext resolveInitResponseUrls(initResponse, finalUrl)
                     } catch (e: Exception) {
+                        val error = AdTrackingError.SessionInitError(
+                            errorMessage = "Failed to decode init response from POST request",
+                            errorCause = e,
+                            errorIsRecoverable = true
+                        )
+                        errorListener?.onError(error)
                         Log.e("OkHttpService", "Failed to decode POST response: ${e.message}", e)
-                        null
+                        return@withContext null
                     }
-                } else null
+                } else {
+                    val error = AdTrackingError.SessionInitError(
+                        errorMessage = "Empty response body from init POST request",
+                        errorIsRecoverable = true
+                    )
+                    errorListener?.onError(error)
+                    Log.e("OkHttpService", error.message)
+                    return@withContext null
+                }
             } else {
-                Log.e("OkHttpService", "Init POST request failed with status code: ${it.code}")
+                val error = AdTrackingError.SessionInitError(
+                    errorMessage = "Init POST request failed with status code: ${response.code}",
+                    errorIsRecoverable = true
+                )
+                errorListener?.onError(error)
+                Log.e("OkHttpService", "Init POST request failed with status code: ${response.code}")
+                return@withContext null
             }
-            return@withContext null
         }
     }
 
@@ -86,6 +173,12 @@ class OkHttpService(
         client.newCall(req).execute().use {
             return@withContext it.body?.string() ?: ""
         }
+    }
+
+    private fun resolveInitResponseUrls(initResponse: InitResponse, baseUrl: String): InitResponse {
+        val resolvedManifestUrl = resolveUrl(baseUrl, initResponse.manifestUrl)
+        val resolvedTrackingUrl = initResponse.trackingUrl?.let { resolveUrl(baseUrl, it) }
+        return InitResponse(resolvedManifestUrl, resolvedTrackingUrl)
     }
 
     private fun getSessionIdFromUrl(url: String): List<String> {
