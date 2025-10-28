@@ -175,6 +175,17 @@ class OkHttpService(
         }
     }
 
+    /**
+     * Resolves the URLs in the [InitResponse] against the provided [baseUrl].
+     *
+     * This function ensures that relative URLs in the init response are converted to absolute URLs
+     * by resolving them against the final base URL, which may differ from the original request URL
+     * due to HTTP redirects.
+     *
+     * @param initResponse The initial response containing potentially relative URLs for manifest and tracking.
+     * @param baseUrl The base URL to resolve relative URLs against (typically the final URL after any redirects).
+     * @return A new [InitResponse] with resolved absolute URLs.
+     */
     private fun resolveInitResponseUrls(initResponse: InitResponse, baseUrl: String): InitResponse {
         val resolvedManifestUrl = resolveUrl(baseUrl, initResponse.manifestUrl)
         val resolvedTrackingUrl = initResponse.trackingUrl?.let { resolveUrl(baseUrl, it) }
