@@ -5,6 +5,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,9 +66,27 @@ class OkHttpServiceTest {
 
         // Then
         val recordedRequest = mockWebServer.takeRequest()
-        // OkHttp sets a default User-Agent, so it should not be our custom one
+        // OkHttp automatically sets its own User-Agent in the format "okhttp/VERSION"
         val userAgent = recordedRequest.getHeader("User-Agent")
         // Default OkHttp User-Agent starts with "okhttp/"
-        assertEquals(true, userAgent?.startsWith("okhttp/"))
+        assertTrue(userAgent?.startsWith("okhttp/") == true)
+    }
+
+    @Test
+    fun `getString uses default User-Agent when userAgent is empty string`() = runTest {
+        val okHttpService = OkHttpService(userAgent = "")
+
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setBody("test response")
+        )
+
+        val url = mockWebServer.url("/test").toString()
+        okHttpService.getString(url)
+
+        val recordedRequest = mockWebServer.takeRequest()
+        val userAgent = recordedRequest.getHeader("User-Agent")
+        assertTrue(userAgent?.startsWith("okhttp/") == true)
     }
 }
