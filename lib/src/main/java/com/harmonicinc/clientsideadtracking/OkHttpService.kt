@@ -17,9 +17,23 @@ import java.net.HttpURLConnection
 import kotlin.coroutines.CoroutineContext
 
 class OkHttpService(
-    private val coroutineContext: CoroutineContext = Dispatchers.IO
+    private val coroutineContext: CoroutineContext = Dispatchers.IO,
+    private val userAgent: String? = null
 ) {
-    private val client = OkHttpClient.Builder().followRedirects(true).build()
+    private val client = OkHttpClient.Builder()
+        .followRedirects(true)
+        .apply {
+            if (!userAgent.isNullOrEmpty()) {
+                addInterceptor { chain ->
+                    val original = chain.request()
+                    val request = original.newBuilder()
+                        .header("User-Agent", userAgent)
+                        .build()
+                    chain.proceed(request)
+                }
+            }
+        }
+        .build()
     private var errorListener: AdTrackingErrorListener? = null
 
     fun setErrorListener(listener: AdTrackingErrorListener?) {
