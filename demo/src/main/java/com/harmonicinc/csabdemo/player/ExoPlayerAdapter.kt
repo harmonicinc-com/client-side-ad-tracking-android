@@ -21,6 +21,8 @@ import java.util.concurrent.CopyOnWriteArrayList
     override val eventListeners = CopyOnWriteArrayList<PlayerEventListener>()
 
     private var previousPlaybackState = PlaybackState.STATE_NONE
+    private var previousVolume: Float = 1.0f
+    private var isMuted: Boolean = false
 
     private val tag = "ExoPlayerAdapter"
 
@@ -52,6 +54,26 @@ import java.util.concurrent.CopyOnWriteArrayList
         // Handle play/pause only
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
             if (playWhenReady) onResume() else onPause()
+        }
+
+        // Handle volume changes for mute/unmute detection
+        override fun onVolumeChanged(volume: Float) {
+            Log.d(tag, "onVolumeChanged: volume=$volume, previousVolume=$previousVolume, isMuted=$isMuted")
+            
+            // Detect mute: volume becomes 0
+            if (volume == 0f && !isMuted) {
+                isMuted = true
+                onMute()
+            }
+            // Detect unmute: volume was 0 and now is non-zero
+            else if (volume > 0f && isMuted) {
+                isMuted = false
+                onUnmute()
+            }
+            
+            // Always notify volume change
+            this@ExoPlayerAdapter.onVolumeChanged(volume)
+            previousVolume = volume
         }
     }
 

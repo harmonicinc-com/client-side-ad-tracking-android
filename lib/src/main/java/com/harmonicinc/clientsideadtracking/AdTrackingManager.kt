@@ -45,7 +45,8 @@ class AdTrackingManager(
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     var omsdkClient: OMSDKClient? = null
-    private var pmmClient: PMMClient? = null
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    var pmmClient: PMMClient? = null
     private var showOverlay = false
     private var errorListener: AdTrackingErrorListener? = null
 
@@ -368,10 +369,20 @@ class AdTrackingManager(
 
             override fun onPause() {
                 omsdkClient?.pause()
+                pmmClient?.onPlayerPause()
             }
 
             override fun onResume() {
                 omsdkClient?.resume()
+                pmmClient?.onPlayerResume()
+            }
+
+            override fun onMute() {
+                pmmClient?.onPlayerMute()
+            }
+
+            override fun onUnmute() {
+                pmmClient?.onPlayerUnmute()
             }
 
             override fun onVideoAdClick() {
