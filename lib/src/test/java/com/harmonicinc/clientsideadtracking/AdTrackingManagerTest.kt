@@ -271,7 +271,12 @@ class AdTrackingManagerTest {
     @Test
     fun testMuteUnmuteTriggersPMMClient() = runTest(timeout = 10.seconds) {
         val baseUrl = mockWebServer.url("/master.mpd").toString()
+        val mockResponse = MockResponse()
+            .setResponseCode(HttpURLConnection.HTTP_MOVED_PERM)
+            .addHeader("location", "$baseUrl?$SESSION_ID_QUERY_PARAM_KEY=")
+        mockWebServer.enqueue(mockResponse)
 
+        // Enqueue the final response after redirect (empty manifest body is fine for this test)
         val finalResponse = MockResponse()
             .setResponseCode(HttpURLConnection.HTTP_OK)
             .setBody("")
