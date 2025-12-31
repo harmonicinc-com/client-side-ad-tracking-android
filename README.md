@@ -130,6 +130,12 @@ Android 8.0 (API 26) or above
      // Call when user clicks play (no need to check if ad is playing. The lib will handle it)
      playerAdapter.onResume()
      
+     // Call when user mutes the player (no need to check if ad is playing. The lib will handle it)
+     playerAdapter.onMute()
+     
+     // Call when user unmutes the player (no need to check if ad is playing. The lib will handle it)
+     playerAdapter.onUnmute()
+     
      // Call when the user clicks an ad
      playerAdapter.onVideoAdClick()
      

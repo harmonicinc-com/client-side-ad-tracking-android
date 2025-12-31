@@ -8,6 +8,8 @@ interface PlayerEventListener {
     fun onBufferEnd() {}
     fun onPause() {}
     fun onResume() {}
+    fun onMute() {}
+    fun onUnmute() {}
     fun onVideoAdClick() {}
     fun onVideoAdViewTouch(view: View, event: MotionEvent) {}
     fun onVolumeChanged(volume: Float) {}

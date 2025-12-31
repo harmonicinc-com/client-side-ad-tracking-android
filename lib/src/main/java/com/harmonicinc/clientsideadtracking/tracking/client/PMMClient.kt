@@ -143,4 +143,57 @@ class PMMClient(
     fun complete(urls: List<String>) {
         sendBeaconAndLog(urls, Tracking.Event.COMPLETE)
     }
+
+    // Player-initiated event handlers - fire beacons based on player actions
+    /**
+     * Call when the player is paused during ad playback.
+     * Fires pause beacons if available in the current ad's tracking data.
+     */
+    fun onPlayerPause() {
+        val urls = tracker.getTrackingUrlsForEvent(Tracking.Event.PAUSE)
+        if (urls.isNotEmpty()) {
+            currentAdBreak = tracker.getCurrentAdBreak()
+            currentAd = tracker.getCurrentAd()
+            sendBeaconAndLog(urls, Tracking.Event.PAUSE)
+        }
+    }
+
+    /**
+     * Call when the player resumes after being paused during ad playback.
+     * Fires resume beacons if available in the current ad's tracking data.
+     */
+    fun onPlayerResume() {
+        val urls = tracker.getTrackingUrlsForEvent(Tracking.Event.RESUME)
+        if (urls.isNotEmpty()) {
+            currentAdBreak = tracker.getCurrentAdBreak()
+            currentAd = tracker.getCurrentAd()
+            sendBeaconAndLog(urls, Tracking.Event.RESUME)
+        }
+    }
+
+    /**
+     * Call when the player is muted during ad playback.
+     * Fires mute beacons if available in the current ad's tracking data.
+     */
+    fun onPlayerMute() {
+        val urls = tracker.getTrackingUrlsForEvent(Tracking.Event.MUTE)
+        if (urls.isNotEmpty()) {
+            currentAdBreak = tracker.getCurrentAdBreak()
+            currentAd = tracker.getCurrentAd()
+            sendBeaconAndLog(urls, Tracking.Event.MUTE)
+        }
+    }
+
+    /**
+     * Call when the player is unmuted during ad playback.
+     * Fires unmute beacons if available in the current ad's tracking data.
+     */
+    fun onPlayerUnmute() {
+        val urls = tracker.getTrackingUrlsForEvent(Tracking.Event.UNMUTE)
+        if (urls.isNotEmpty()) {
+            currentAdBreak = tracker.getCurrentAdBreak()
+            currentAd = tracker.getCurrentAd()
+            sendBeaconAndLog(urls, Tracking.Event.UNMUTE)
+        }
+    }
 }

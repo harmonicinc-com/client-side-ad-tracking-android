@@ -98,6 +98,29 @@ class AdMetadataTracker(
         return currentAd != null
     }
 
+    /**
+     * Get tracking URLs for a specific event type from the current ad.
+     * Used for player-initiated events like pause, resume, mute, unmute.
+     * Returns empty list if no ad is currently playing or no tracking URLs exist for the event.
+     */
+    fun getTrackingUrlsForEvent(eventType: Tracking.Event): List<String> {
+        val ad = currentAd ?: return emptyList()
+        
+        return ad.tracking
+            .filter { it.event == eventType }
+            .flatMap { it.url }
+    }
+
+    /**
+     * Get the current ad break being played
+     */
+    fun getCurrentAdBreak(): AdBreak? = currentAdBreak
+
+    /**
+     * Get the current ad being played
+     */
+    fun getCurrentAd(): Ad? = currentAd
+
     private fun startMetadataUpdateJob(metadataUrl: String, sessionId: String) {
         metadataUpdateJob?.cancel()
         metadataUpdateJob = coroutineIOScope.launch {
@@ -185,7 +208,8 @@ class AdMetadataTracker(
             if (mpdTime in ad.startTime .. ad.startTime + ad.duration.toLong() + ADBREAK_END_TIME_TOLERANCE_MS) {
                 currentAd = ad
                 tempTracking = ad.tracking.filter { tracking ->
-                    tracking.event != Tracking.Event.CLICK_TRACKING && tracking.event != Tracking.Event.CLICK_ABSTRACT_TYPE
+                    // Skip player-initiated events - they should only fire on user action
+                    !tracking.event.isPlayerInitiated()
                 }
                 // Need to fire update as end time & duration changes
                 adBreakListeners.forEach {
@@ -246,7 +270,8 @@ class AdMetadataTracker(
         event.adBreaks.forEach { adBreak ->
             adBreak.ads.forEach { ad ->
                 ad.tracking.forEach { tracking ->
-                    if (!tracking.fired) {
+                    // Skip player-initiated events - they should only fire on user action
+                    if (!tracking.fired && !tracking.event.isPlayerInitiated()) {
                         unfiredEvents.add(UnfiredEvent(adBreak, ad, tracking))
                     }
                 }

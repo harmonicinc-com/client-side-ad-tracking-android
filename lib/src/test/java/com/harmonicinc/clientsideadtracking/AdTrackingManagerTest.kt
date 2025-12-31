@@ -12,6 +12,7 @@ import com.google.android.gms.tasks.Task
 import com.harmonicinc.clientsideadtracking.player.MockPlayerAdapter
 import com.harmonicinc.clientsideadtracking.tracking.AdMetadataTracker
 import com.harmonicinc.clientsideadtracking.tracking.client.OMSDKClient
+import com.harmonicinc.clientsideadtracking.tracking.client.PMMClient
 import com.harmonicinc.clientsideadtracking.tracking.model.InitResponse
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.PAL_NONCE_QUERY_PARAM_KEY
 import com.harmonicinc.clientsideadtracking.tracking.util.Constants.SESSION_ID_QUERY_PARAM_KEY
@@ -265,6 +266,52 @@ class AdTrackingManagerTest {
 
         adTrackingManager.cleanupAfterStop()
         verify { nonceManager.sendPlaybackEnd() }
+    }
+
+    @Test
+    fun testMuteUnmuteTriggersPMMClient() = runTest(timeout = 10.seconds) {
+        val baseUrl = mockWebServer.url("/master.mpd").toString()
+
+        val finalResponse = MockResponse()
+            .setResponseCode(HttpURLConnection.HTTP_OK)
+            .setBody("")
+        mockWebServer.enqueue(finalResponse)
+
+        every { nonceManager.nonce } returns ""
+        every { nonceLoader.loadNonceManager(any()) } returns getFakeTask(nonceManager)
+
+        val adTrackingManager = AdTrackingManager(activity, nonceLoader, OkHttpService())
+        adTrackingManager.prepareBeforeLoad(baseUrl, adTrackingParams)
+
+        justRun { nonceManager.sendPlaybackStart() }
+        justRun { nonceManager.sendPlaybackEnd() }
+
+        adTrackingManager.onPlay(context, mockPlayerAdapter, overlayViewContainer, playerView)
+
+        // Mock the PMMClient
+        val mockPMMClient = mockk<PMMClient>()
+        justRun { mockPMMClient.onPlayerMute() }
+        justRun { mockPMMClient.onPlayerUnmute() }
+        justRun { mockPMMClient.onPlayerPause() }
+        justRun { mockPMMClient.onPlayerResume() }
+        adTrackingManager.pmmClient = mockPMMClient
+
+        // Trigger mute event
+        mockPlayerAdapter.onMute()
+        verify { mockPMMClient.onPlayerMute() }
+
+        // Trigger unmute event
+        mockPlayerAdapter.onUnmute()
+        verify { mockPMMClient.onPlayerUnmute() }
+
+        // Verify pause/resume also trigger PMMClient
+        mockPlayerAdapter.onPause()
+        verify { mockPMMClient.onPlayerPause() }
+
+        mockPlayerAdapter.onResume()
+        verify { mockPMMClient.onPlayerResume() }
+
+        adTrackingManager.cleanupAfterStop()
     }
 
     private fun <T: Any> getFakeTask(mockResult: T): Task<T> {

@@ -1,0 +1,80 @@
+{
+  "adBreaks": [{
+    "id": "269098710",
+    "startTime": 1560332865457,
+    "duration": 28400,
+    "ads": [{
+      "id": "269098710",
+      "startTime": 1560332865457,
+      "duration": 15015,
+      "clickThrough": "http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=defaultClick",
+      "clickTracking": "http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=defaultClickTracking",
+      "trackingEvents": [{
+        "event": "impression",
+        "startTime": 1560332865457,
+        "duration": 15015,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=defaultImpression"]
+      }, {
+        "event": "start",
+        "startTime": 1560332865457,
+        "duration": 0,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=start"]
+      }, {
+        "event": "firstQuartile",
+        "startTime": 1560332869211,
+        "duration": 0,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=firstQuartile"]
+      }, {
+        "event": "midpoint",
+        "startTime": 1560332872965,
+        "duration": 0,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=midpoint"]
+      }, {
+        "event": "thirdQuartile",
+        "startTime": 1560332876718,
+        "duration": 0,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=thirdQuartile"]
+      }, {
+        "event": "complete",
+        "startTime": 1560332880472,
+        "duration": 0,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=complete"]
+      }, {
+        "event": "pause",
+        "startTime": 1560332865457,
+        "duration": 15015,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=pause"]
+      }, {
+        "event": "resume",
+        "startTime": 1560332865457,
+        "duration": 15015,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=resume"]
+      }, {
+        "event": "mute",
+        "startTime": 1560332865457,
+        "duration": 15015,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=mute"]
+      }, {
+        "event": "unmute",
+        "startTime": 1560332865457,
+        "duration": 15015,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=unmute"]
+      }, {
+        "event": "clickTracking",
+        "startTime": 1560332865457,
+        "duration": 0,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=clickTracking"]
+      }],
+      "companionAds": {
+        "attributes": {
+          "required": "all"
+        },
+        "companion": []
+      }
+    }]
+  }],
+  "dataRange": {
+    "start": 1560332626257,
+    "end": 1560332893857
+  }
+}

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Client Side Ad Tracking Android</string>
+    <string name="mute_button_description">Mute/Unmute</string>
 </resources>

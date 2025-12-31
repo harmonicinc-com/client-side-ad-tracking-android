@@ -13,6 +13,7 @@ import com.harmonicinc.clientsideadtracking.tracking.util.Constants
 import io.mockk.MockKAnnotations
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.justRun
 import io.mockk.mockk
@@ -212,5 +213,211 @@ class PMMClientTest {
 
         // Verify event log was still created despite beacon failure
         verify { mockEventLogListener.onEvent(any()) }
+    }
+
+    @Test
+    fun testPlayerMuteSendsBeaconWhenAdPlaying() = runTest(timeout = 10.seconds) {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+        
+        val eventLogSlot = slot<EventLog>()
+        val mockEventLogListener = mockk<EventLogListener>()
+
+        // Load mock metadata with player events
+        val jsonStr = javaClass.classLoader!!.getResourceAsStream("metadata/with_player_events.json")
+            .bufferedReader().use { it.readText() }
+        val expectedMetadata = EventManifest()
+        expectedMetadata.parse(jsonStr)
+        val expectAdBreak = expectedMetadata.adBreaks[0]
+        val expectAd = expectAdBreak.ads[0]
+
+        // Set up mocks
+        justRun { tracker.addAdProgressListener(any()) }
+        justRun { mockEventLogListener.onEvent(capture(eventLogSlot)) }
+        justRun { context.sendBroadcast(any()) }
+        coEvery { okHttpService.getString(any()) } returns ""
+        
+        // Mock tracker to return current ad and mute tracking URLs
+        val muteUrls = expectAd.tracking
+            .filter { it.event == Tracking.Event.MUTE }
+            .flatMap { it.url }
+        every { tracker.getTrackingUrlsForEvent(Tracking.Event.MUTE) } returns muteUrls
+        every { tracker.getCurrentAdBreak() } returns expectAdBreak
+        every { tracker.getCurrentAd() } returns expectAd
+
+        // Create PMMClient
+        val client = PMMClient(
+            tracker = tracker,
+            okHttpService = okHttpService,
+            context = context,
+            coroutineScope = testScope,
+            ioDispatcher = testDispatcher
+        )
+        client.setListener(mockEventLogListener)
+
+        // Trigger mute event
+        client.onPlayerMute()
+
+        // Advance test scheduler to execute all pending coroutines
+        testScheduler.advanceUntilIdle()
+
+        // Verify beacon was sent for mute event
+        coVerify { okHttpService.getString(muteUrls[0]) }
+        
+        // Verify event log was created with MUTE event
+        verify { mockEventLogListener.onEvent(eventLogSlot.captured) }
+        assertEquals(Tracking.Event.MUTE, eventLogSlot.captured.event)
+        assertEquals(expectAdBreak.id, eventLogSlot.captured.adBreakId)
+        assertEquals(expectAd.id, eventLogSlot.captured.adId)
+    }
+
+    @Test
+    fun testPlayerUnmuteSendsBeaconWhenAdPlaying() = runTest(timeout = 10.seconds) {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+        
+        val eventLogSlot = slot<EventLog>()
+        val mockEventLogListener = mockk<EventLogListener>()
+
+        // Load mock metadata with player events
+        val jsonStr = javaClass.classLoader!!.getResourceAsStream("metadata/with_player_events.json")
+            .bufferedReader().use { it.readText() }
+        val expectedMetadata = EventManifest()
+        expectedMetadata.parse(jsonStr)
+        val expectAdBreak = expectedMetadata.adBreaks[0]
+        val expectAd = expectAdBreak.ads[0]
+
+        // Set up mocks
+        justRun { tracker.addAdProgressListener(any()) }
+        justRun { mockEventLogListener.onEvent(capture(eventLogSlot)) }
+        justRun { context.sendBroadcast(any()) }
+        coEvery { okHttpService.getString(any()) } returns ""
+        
+        // Mock tracker to return current ad and unmute tracking URLs
+        val unmuteUrls = expectAd.tracking
+            .filter { it.event == Tracking.Event.UNMUTE }
+            .flatMap { it.url }
+        every { tracker.getTrackingUrlsForEvent(Tracking.Event.UNMUTE) } returns unmuteUrls
+        every { tracker.getCurrentAdBreak() } returns expectAdBreak
+        every { tracker.getCurrentAd() } returns expectAd
+
+        // Create PMMClient
+        val client = PMMClient(
+            tracker = tracker,
+            okHttpService = okHttpService,
+            context = context,
+            coroutineScope = testScope,
+            ioDispatcher = testDispatcher
+        )
+        client.setListener(mockEventLogListener)
+
+        // Trigger unmute event
+        client.onPlayerUnmute()
+
+        // Advance test scheduler to execute all pending coroutines
+        testScheduler.advanceUntilIdle()
+
+        // Verify beacon was sent for unmute event
+        coVerify { okHttpService.getString(unmuteUrls[0]) }
+        
+        // Verify event log was created with UNMUTE event
+        verify { mockEventLogListener.onEvent(eventLogSlot.captured) }
+        assertEquals(Tracking.Event.UNMUTE, eventLogSlot.captured.event)
+    }
+
+    @Test
+    fun testPlayerPauseResumeSendsBeaconWhenAdPlaying() = runTest(timeout = 10.seconds) {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+        
+        val eventLogList = mutableListOf<EventLog>()
+        val mockEventLogListener = mockk<EventLogListener>()
+
+        // Load mock metadata with player events
+        val jsonStr = javaClass.classLoader!!.getResourceAsStream("metadata/with_player_events.json")
+            .bufferedReader().use { it.readText() }
+        val expectedMetadata = EventManifest()
+        expectedMetadata.parse(jsonStr)
+        val expectAdBreak = expectedMetadata.adBreaks[0]
+        val expectAd = expectAdBreak.ads[0]
+
+        // Set up mocks
+        justRun { tracker.addAdProgressListener(any()) }
+        justRun { mockEventLogListener.onEvent(capture(eventLogList)) }
+        justRun { context.sendBroadcast(any()) }
+        coEvery { okHttpService.getString(any()) } returns ""
+        
+        // Mock tracker to return current ad and pause/resume tracking URLs
+        val pauseUrls = expectAd.tracking
+            .filter { it.event == Tracking.Event.PAUSE }
+            .flatMap { it.url }
+        val resumeUrls = expectAd.tracking
+            .filter { it.event == Tracking.Event.RESUME }
+            .flatMap { it.url }
+        every { tracker.getTrackingUrlsForEvent(Tracking.Event.PAUSE) } returns pauseUrls
+        every { tracker.getTrackingUrlsForEvent(Tracking.Event.RESUME) } returns resumeUrls
+        every { tracker.getCurrentAdBreak() } returns expectAdBreak
+        every { tracker.getCurrentAd() } returns expectAd
+
+        // Create PMMClient
+        val client = PMMClient(
+            tracker = tracker,
+            okHttpService = okHttpService,
+            context = context,
+            coroutineScope = testScope,
+            ioDispatcher = testDispatcher
+        )
+        client.setListener(mockEventLogListener)
+
+        // Trigger pause event
+        client.onPlayerPause()
+        testScheduler.advanceUntilIdle()
+
+        // Verify beacon was sent for pause event
+        coVerify { okHttpService.getString(pauseUrls[0]) }
+        assertEquals(Tracking.Event.PAUSE, eventLogList[0].event)
+
+        // Trigger resume event
+        client.onPlayerResume()
+        testScheduler.advanceUntilIdle()
+
+        // Verify beacon was sent for resume event
+        coVerify { okHttpService.getString(resumeUrls[0]) }
+        assertEquals(Tracking.Event.RESUME, eventLogList[1].event)
+    }
+
+    @Test
+    fun testPlayerMuteDoesNotSendBeaconWhenNoAdPlaying() = runTest(timeout = 10.seconds) {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+        
+        val mockEventLogListener = mockk<EventLogListener>()
+
+        // Set up mocks - no current ad
+        justRun { tracker.addAdProgressListener(any()) }
+        justRun { context.sendBroadcast(any()) }
+        
+        // Mock tracker to return empty URLs (no ad playing)
+        every { tracker.getTrackingUrlsForEvent(Tracking.Event.MUTE) } returns emptyList()
+
+        // Create PMMClient
+        val client = PMMClient(
+            tracker = tracker,
+            okHttpService = okHttpService,
+            context = context,
+            coroutineScope = testScope,
+            ioDispatcher = testDispatcher
+        )
+        client.setListener(mockEventLogListener)
+
+        // Trigger mute event when no ad is playing
+        client.onPlayerMute()
+
+        // Advance test scheduler
+        testScheduler.advanceUntilIdle()
+
+        // Verify no beacon was sent and no event log was created
+        coVerify(exactly = 0) { okHttpService.getString(any()) }
+        verify(exactly = 0) { mockEventLogListener.onEvent(any()) }
     }
 }
