@@ -22,6 +22,8 @@ class Tracking(
         CLICK_TRACKING,
         PAUSE,
         RESUME,
+        MUTE,
+        UNMUTE,
         BUFFER_START,
         BUFFER_END,
         VOLUME,
@@ -29,7 +31,28 @@ class Tracking(
 
         // Custom events
         STOPPED,
-        UNKNOWN
+        UNKNOWN;
+
+        companion object {
+            /**
+             * Player-initiated events that should only fire when the user performs
+             * the corresponding action, not based on playback time.
+             */
+            val PLAYER_INITIATED_EVENTS = setOf(
+                PAUSE,
+                RESUME,
+                MUTE,
+                UNMUTE,
+                CLICK_ABSTRACT_TYPE,
+                CLICK_TRACKING,
+            )
+        }
+
+        /**
+         * Returns true if this event is player-initiated and should not be
+         * auto-fired based on playback time.
+         */
+        fun isPlayerInitiated(): Boolean = this in PLAYER_INITIATED_EVENTS
     }
 
     fun parse(json: JSONObject) {
@@ -48,6 +71,10 @@ class Tracking(
             "complete" -> Event.COMPLETE
             "clickabstracttype" -> Event.CLICK_ABSTRACT_TYPE
             "clicktracking" -> Event.CLICK_TRACKING
+            "pause" -> Event.PAUSE
+            "resume" -> Event.RESUME
+            "mute" -> Event.MUTE
+            "unmute" -> Event.UNMUTE
             else -> Event.UNKNOWN
         }
     }

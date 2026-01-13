@@ -45,6 +45,18 @@ interface PlayerAdapter {
         }
     }
 
+    fun onMute() {
+        eventListeners.forEach {
+            it.onMute()
+        }
+    }
+
+    fun onUnmute() {
+        eventListeners.forEach {
+            it.onUnmute()
+        }
+    }
+
     fun onVideoAdClick() {
         eventListeners.forEach {
             it.onVideoAdClick()
