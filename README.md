@@ -136,6 +136,18 @@ Android 8.0 (API 26) or above
      // Call when user unmutes the player (no need to check if ad is playing. The lib will handle it)
      playerAdapter.onUnmute()
      
+     // Call when user rewinds the player (no need to check if ad is playing. The lib will handle it)
+     playerAdapter.onRewind()
+     
+     // Call when user skips the ad (no need to check if ad is playing. The lib will handle it)
+     playerAdapter.onSkip()
+     
+     // Call when the player is expanded (e.g., enters fullscreen) (no need to check if ad is playing. The lib will handle it)
+     playerAdapter.onPlayerExpand()
+     
+     // Call when the player is collapsed (e.g., exits fullscreen) (no need to check if ad is playing. The lib will handle it)
+     playerAdapter.onPlayerCollapse()
+     
      // Call when the user clicks an ad
      playerAdapter.onVideoAdClick()
      

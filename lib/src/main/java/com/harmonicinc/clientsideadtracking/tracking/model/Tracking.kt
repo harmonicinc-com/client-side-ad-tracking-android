@@ -24,6 +24,10 @@ class Tracking(
         RESUME,
         MUTE,
         UNMUTE,
+        REWIND,
+        SKIP,
+        PLAYER_EXPAND,
+        PLAYER_COLLAPSE,
         BUFFER_START,
         BUFFER_END,
         VOLUME,
@@ -43,6 +47,10 @@ class Tracking(
                 RESUME,
                 MUTE,
                 UNMUTE,
+                REWIND,
+                SKIP,
+                PLAYER_EXPAND,
+                PLAYER_COLLAPSE,
                 CLICK_ABSTRACT_TYPE,
                 CLICK_TRACKING,
             )
@@ -75,6 +83,10 @@ class Tracking(
             "resume" -> Event.RESUME
             "mute" -> Event.MUTE
             "unmute" -> Event.UNMUTE
+            "rewind" -> Event.REWIND
+            "skip" -> Event.SKIP
+            "playerexpand" -> Event.PLAYER_EXPAND
+            "playercollapse" -> Event.PLAYER_COLLAPSE
             else -> Event.UNKNOWN
         }
     }

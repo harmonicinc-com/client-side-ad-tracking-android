@@ -196,4 +196,56 @@ class PMMClient(
             sendBeaconAndLog(urls, Tracking.Event.UNMUTE)
         }
     }
+
+    /**
+     * Call when the player rewinds during ad playback.
+     * Fires rewind beacons if available in the current ad's tracking data.
+     */
+    fun onPlayerRewind() {
+        val urls = tracker.getTrackingUrlsForEvent(Tracking.Event.REWIND)
+        if (urls.isNotEmpty()) {
+            currentAdBreak = tracker.getCurrentAdBreak()
+            currentAd = tracker.getCurrentAd()
+            sendBeaconAndLog(urls, Tracking.Event.REWIND)
+        }
+    }
+
+    /**
+     * Call when the ad is skipped during ad playback.
+     * Fires skip beacons if available in the current ad's tracking data.
+     */
+    fun onPlayerSkip() {
+        val urls = tracker.getTrackingUrlsForEvent(Tracking.Event.SKIP)
+        if (urls.isNotEmpty()) {
+            currentAdBreak = tracker.getCurrentAdBreak()
+            currentAd = tracker.getCurrentAd()
+            sendBeaconAndLog(urls, Tracking.Event.SKIP)
+        }
+    }
+
+    /**
+     * Call when the player is expanded (e.g., enters fullscreen) during ad playback.
+     * Fires playerExpand beacons if available in the current ad's tracking data.
+     */
+    fun onPlayerExpand() {
+        val urls = tracker.getTrackingUrlsForEvent(Tracking.Event.PLAYER_EXPAND)
+        if (urls.isNotEmpty()) {
+            currentAdBreak = tracker.getCurrentAdBreak()
+            currentAd = tracker.getCurrentAd()
+            sendBeaconAndLog(urls, Tracking.Event.PLAYER_EXPAND)
+        }
+    }
+
+    /**
+     * Call when the player is collapsed (e.g., exits fullscreen) during ad playback.
+     * Fires playerCollapse beacons if available in the current ad's tracking data.
+     */
+    fun onPlayerCollapse() {
+        val urls = tracker.getTrackingUrlsForEvent(Tracking.Event.PLAYER_COLLAPSE)
+        if (urls.isNotEmpty()) {
+            currentAdBreak = tracker.getCurrentAdBreak()
+            currentAd = tracker.getCurrentAd()
+            sendBeaconAndLog(urls, Tracking.Event.PLAYER_COLLAPSE)
+        }
+    }
 }
