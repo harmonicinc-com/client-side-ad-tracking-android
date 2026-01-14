@@ -57,6 +57,30 @@ interface PlayerAdapter {
         }
     }
 
+    fun onRewind() {
+        eventListeners.forEach {
+            it.onRewind()
+        }
+    }
+
+    fun onSkip() {
+        eventListeners.forEach {
+            it.onSkip()
+        }
+    }
+
+    fun onPlayerExpand() {
+        eventListeners.forEach {
+            it.onPlayerExpand()
+        }
+    }
+
+    fun onPlayerCollapse() {
+        eventListeners.forEach {
+            it.onPlayerCollapse()
+        }
+    }
+
     fun onVideoAdClick() {
         eventListeners.forEach {
             it.onVideoAdClick()

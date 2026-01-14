@@ -385,6 +385,22 @@ class AdTrackingManager(
                 pmmClient?.onPlayerUnmute()
             }
 
+            override fun onRewind() {
+                pmmClient?.onPlayerRewind()
+            }
+
+            override fun onSkip() {
+                pmmClient?.onPlayerSkip()
+            }
+
+            override fun onPlayerExpand() {
+                pmmClient?.onPlayerExpand()
+            }
+
+            override fun onPlayerCollapse() {
+                pmmClient?.onPlayerCollapse()
+            }
+
             override fun onVideoAdClick() {
                 this@AdTrackingManager.onVideoAdClick()
             }

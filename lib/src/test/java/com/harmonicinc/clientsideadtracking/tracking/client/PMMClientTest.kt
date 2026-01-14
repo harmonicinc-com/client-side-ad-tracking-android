@@ -420,4 +420,179 @@ class PMMClientTest {
         coVerify(exactly = 0) { okHttpService.getString(any()) }
         verify(exactly = 0) { mockEventLogListener.onEvent(any()) }
     }
+
+    @Test
+    fun testPlayerRewindSendsBeaconWhenAdPlaying() = runTest(timeout = 10.seconds) {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+        
+        val eventLogSlot = slot<EventLog>()
+        val mockEventLogListener = mockk<EventLogListener>()
+
+        // Load mock metadata with player events
+        val jsonStr = javaClass.classLoader!!.getResourceAsStream("metadata/with_player_events.json")
+            .bufferedReader().use { it.readText() }
+        val expectedMetadata = EventManifest()
+        expectedMetadata.parse(jsonStr)
+        val expectAdBreak = expectedMetadata.adBreaks[0]
+        val expectAd = expectAdBreak.ads[0]
+
+        // Set up mocks
+        justRun { tracker.addAdProgressListener(any()) }
+        justRun { mockEventLogListener.onEvent(capture(eventLogSlot)) }
+        justRun { context.sendBroadcast(any()) }
+        coEvery { okHttpService.getString(any()) } returns ""
+        
+        // Mock tracker to return current ad and rewind tracking URLs
+        val rewindUrls = expectAd.tracking
+            .filter { it.event == Tracking.Event.REWIND }
+            .flatMap { it.url }
+        every { tracker.getTrackingUrlsForEvent(Tracking.Event.REWIND) } returns rewindUrls
+        every { tracker.getCurrentAdBreak() } returns expectAdBreak
+        every { tracker.getCurrentAd() } returns expectAd
+
+        // Create PMMClient
+        val client = PMMClient(
+            tracker = tracker,
+            okHttpService = okHttpService,
+            context = context,
+            coroutineScope = testScope,
+            ioDispatcher = testDispatcher
+        )
+        client.setListener(mockEventLogListener)
+
+        // Trigger rewind event
+        client.onPlayerRewind()
+
+        // Advance test scheduler to execute all pending coroutines
+        testScheduler.advanceUntilIdle()
+
+        // Verify beacon was sent for rewind event
+        coVerify { okHttpService.getString(rewindUrls[0]) }
+        
+        // Verify event log was created with REWIND event
+        verify { mockEventLogListener.onEvent(eventLogSlot.captured) }
+        assertEquals(Tracking.Event.REWIND, eventLogSlot.captured.event)
+        assertEquals(expectAdBreak.id, eventLogSlot.captured.adBreakId)
+        assertEquals(expectAd.id, eventLogSlot.captured.adId)
+    }
+
+    @Test
+    fun testPlayerSkipSendsBeaconWhenAdPlaying() = runTest(timeout = 10.seconds) {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+        
+        val eventLogSlot = slot<EventLog>()
+        val mockEventLogListener = mockk<EventLogListener>()
+
+        // Load mock metadata with player events
+        val jsonStr = javaClass.classLoader!!.getResourceAsStream("metadata/with_player_events.json")
+            .bufferedReader().use { it.readText() }
+        val expectedMetadata = EventManifest()
+        expectedMetadata.parse(jsonStr)
+        val expectAdBreak = expectedMetadata.adBreaks[0]
+        val expectAd = expectAdBreak.ads[0]
+
+        // Set up mocks
+        justRun { tracker.addAdProgressListener(any()) }
+        justRun { mockEventLogListener.onEvent(capture(eventLogSlot)) }
+        justRun { context.sendBroadcast(any()) }
+        coEvery { okHttpService.getString(any()) } returns ""
+        
+        // Mock tracker to return current ad and skip tracking URLs
+        val skipUrls = expectAd.tracking
+            .filter { it.event == Tracking.Event.SKIP }
+            .flatMap { it.url }
+        every { tracker.getTrackingUrlsForEvent(Tracking.Event.SKIP) } returns skipUrls
+        every { tracker.getCurrentAdBreak() } returns expectAdBreak
+        every { tracker.getCurrentAd() } returns expectAd
+
+        // Create PMMClient
+        val client = PMMClient(
+            tracker = tracker,
+            okHttpService = okHttpService,
+            context = context,
+            coroutineScope = testScope,
+            ioDispatcher = testDispatcher
+        )
+        client.setListener(mockEventLogListener)
+
+        // Trigger skip event
+        client.onPlayerSkip()
+
+        // Advance test scheduler to execute all pending coroutines
+        testScheduler.advanceUntilIdle()
+
+        // Verify beacon was sent for skip event
+        coVerify { okHttpService.getString(skipUrls[0]) }
+        
+        // Verify event log was created with SKIP event
+        verify { mockEventLogListener.onEvent(eventLogSlot.captured) }
+        assertEquals(Tracking.Event.SKIP, eventLogSlot.captured.event)
+        assertEquals(expectAdBreak.id, eventLogSlot.captured.adBreakId)
+        assertEquals(expectAd.id, eventLogSlot.captured.adId)
+    }
+
+    @Test
+    fun testPlayerExpandCollapseSendsBeaconWhenAdPlaying() = runTest(timeout = 10.seconds) {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+        
+        val eventLogList = mutableListOf<EventLog>()
+        val mockEventLogListener = mockk<EventLogListener>()
+
+        // Load mock metadata with player events
+        val jsonStr = javaClass.classLoader!!.getResourceAsStream("metadata/with_player_events.json")
+            .bufferedReader().use { it.readText() }
+        val expectedMetadata = EventManifest()
+        expectedMetadata.parse(jsonStr)
+        val expectAdBreak = expectedMetadata.adBreaks[0]
+        val expectAd = expectAdBreak.ads[0]
+
+        // Set up mocks
+        justRun { tracker.addAdProgressListener(any()) }
+        justRun { mockEventLogListener.onEvent(capture(eventLogList)) }
+        justRun { context.sendBroadcast(any()) }
+        coEvery { okHttpService.getString(any()) } returns ""
+        
+        // Mock tracker to return current ad and expand/collapse tracking URLs
+        val expandUrls = expectAd.tracking
+            .filter { it.event == Tracking.Event.PLAYER_EXPAND }
+            .flatMap { it.url }
+        val collapseUrls = expectAd.tracking
+            .filter { it.event == Tracking.Event.PLAYER_COLLAPSE }
+            .flatMap { it.url }
+        every { tracker.getTrackingUrlsForEvent(Tracking.Event.PLAYER_EXPAND) } returns expandUrls
+        every { tracker.getTrackingUrlsForEvent(Tracking.Event.PLAYER_COLLAPSE) } returns collapseUrls
+        every { tracker.getCurrentAdBreak() } returns expectAdBreak
+        every { tracker.getCurrentAd() } returns expectAd
+
+        // Create PMMClient
+        val client = PMMClient(
+            tracker = tracker,
+            okHttpService = okHttpService,
+            context = context,
+            coroutineScope = testScope,
+            ioDispatcher = testDispatcher
+        )
+        client.setListener(mockEventLogListener)
+
+        // Trigger expand event (e.g., entering fullscreen)
+        client.onPlayerExpand()
+        testScheduler.advanceUntilIdle()
+
+        // Verify beacon was sent for expand event
+        coVerify { okHttpService.getString(expandUrls[0]) }
+        assertEquals(Tracking.Event.PLAYER_EXPAND, eventLogList[0].event)
+
+        // Trigger collapse event (e.g., exiting fullscreen)
+        client.onPlayerCollapse()
+        testScheduler.advanceUntilIdle()
+
+        // Verify beacon was sent for collapse event
+        coVerify { okHttpService.getString(collapseUrls[0]) }
+        assertEquals(Tracking.Event.PLAYER_COLLAPSE, eventLogList[1].event)
+        assertEquals(expectAdBreak.id, eventLogList[1].adBreakId)
+        assertEquals(expectAd.id, eventLogList[1].adId)
+    }
 }

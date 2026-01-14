@@ -10,6 +10,10 @@ interface PlayerEventListener {
     fun onResume() {}
     fun onMute() {}
     fun onUnmute() {}
+    fun onRewind() {}
+    fun onSkip() {}
+    fun onPlayerExpand() {}
+    fun onPlayerCollapse() {}
     fun onVideoAdClick() {}
     fun onVideoAdViewTouch(view: View, event: MotionEvent) {}
     fun onVolumeChanged(volume: Float) {}

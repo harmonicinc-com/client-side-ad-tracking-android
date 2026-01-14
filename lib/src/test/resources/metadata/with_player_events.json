@@ -60,6 +60,26 @@
         "duration": 15015,
         "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=unmute"]
       }, {
+        "event": "rewind",
+        "startTime": 1560332865457,
+        "duration": 15015,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=rewind"]
+      }, {
+        "event": "skip",
+        "startTime": 1560332865457,
+        "duration": 15015,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=skip"]
+      }, {
+        "event": "playerExpand",
+        "startTime": 1560332865457,
+        "duration": 15015,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=playerExpand"]
+      }, {
+        "event": "playerCollapse",
+        "startTime": 1560332865457,
+        "duration": 15015,
+        "signalingUrls": ["http://mock-ads:12345/beacon?t=1560312000000000000&id=Harmonic_15s_A&cn=playerCollapse"]
+      }, {
         "event": "clickTracking",
         "startTime": 1560332865457,
         "duration": 0,
