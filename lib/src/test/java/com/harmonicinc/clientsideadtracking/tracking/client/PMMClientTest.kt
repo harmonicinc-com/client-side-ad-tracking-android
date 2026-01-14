@@ -529,6 +529,8 @@ class PMMClientTest {
         // Verify event log was created with SKIP event
         verify { mockEventLogListener.onEvent(eventLogSlot.captured) }
         assertEquals(Tracking.Event.SKIP, eventLogSlot.captured.event)
+        assertEquals(expectAdBreak.id, eventLogSlot.captured.adBreakId)
+        assertEquals(expectAd.id, eventLogSlot.captured.adId)
     }
 
     @Test
@@ -590,5 +592,7 @@ class PMMClientTest {
         // Verify beacon was sent for collapse event
         coVerify { okHttpService.getString(collapseUrls[0]) }
         assertEquals(Tracking.Event.PLAYER_COLLAPSE, eventLogList[1].event)
+        assertEquals(expectAdBreak.id, eventLogList[1].adBreakId)
+        assertEquals(expectAd.id, eventLogList[1].adId)
     }
 }
