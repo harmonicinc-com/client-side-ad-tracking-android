@@ -8,7 +8,6 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.WebSettings
 import androidx.annotation.VisibleForTesting
 import androidx.core.net.toUri
 import com.google.ads.interactivemedia.pal.ConsentSettings
@@ -70,7 +69,7 @@ class AdTrackingManager(
                 .allowStorage(true)
                 .build()
         ),
-        OkHttpService(userAgent = WebSettings.getDefaultUserAgent(androidContext))
+        OkHttpService(userAgent = System.getProperty("http.agent"))
     )
 
     suspend fun prepareBeforeLoad(manifestUrl: String, params: AdTrackingManagerParams) {
