@@ -8,7 +8,6 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.WebSettings
 import androidx.annotation.VisibleForTesting
 import androidx.core.net.toUri
 import com.google.ads.interactivemedia.pal.ConsentSettings
@@ -70,7 +69,8 @@ class AdTrackingManager(
                 .allowStorage(true)
                 .build()
         ),
-        OkHttpService(userAgent = WebSettings.getDefaultUserAgent(androidContext))
+        // To match device user agent used in manifest requests, e.g., Dalvik/2.1.0 (Linux; U; Android 16; sdk_gphone64_arm64 Build/BP22.250221.010)
+        OkHttpService(userAgent = System.getProperty("http.agent"))
     )
 
     suspend fun prepareBeforeLoad(manifestUrl: String, params: AdTrackingManagerParams) {
