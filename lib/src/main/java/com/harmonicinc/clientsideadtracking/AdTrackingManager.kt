@@ -69,6 +69,7 @@ class AdTrackingManager(
                 .allowStorage(true)
                 .build()
         ),
+        // To match device user agent used in manifest requests, e.g., Dalvik/2.1.0 (Linux; U; Android 16; sdk_gphone64_arm64 Build/BP22.250221.010)
         OkHttpService(userAgent = System.getProperty("http.agent"))
     )
 
