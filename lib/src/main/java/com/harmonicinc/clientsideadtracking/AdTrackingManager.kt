@@ -229,7 +229,9 @@ class AdTrackingManager(
         if (::trackingOverlay.isInitialized) {
             trackingOverlay.onDestroy()
         }
-        metadataTracker.onStopped()
+        if (::metadataTracker.isInitialized) {
+            metadataTracker.onStopped()
+        }
         if (::adChoiceManager.isInitialized) {
             adChoiceManager.onDestroy()
         }
