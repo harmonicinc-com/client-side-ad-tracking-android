@@ -389,3 +389,7 @@ The following table is a list of API frameworks either supported by a placement 
 
 > [!NOTE]  
 > When `appendNonceToUrl` is called, the resulting URL will be constructed using the URL obtained above.
+
+### Past Ad Breaks
+
+The adapter now supports firing beacons for past ad breaks when a user seeks back to a position earlier than when live playback started. If the stream contains ads in that earlier portion of the timeline, those ad break beacons will also be fired if user viewed them.
