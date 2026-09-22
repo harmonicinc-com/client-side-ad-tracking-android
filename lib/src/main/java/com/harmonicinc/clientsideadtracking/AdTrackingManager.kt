@@ -270,6 +270,10 @@ class AdTrackingManager(
         return ssaiSupported
     }
 
+    fun isViewTrackingEnabled(): Boolean {
+        return omsdkClient != null
+    }
+
     fun getObtainedManifestUrl(): String? {
         Log.d(TAG, "Obtained manifest URL: $manifestUrl")
         return manifestUrl

@@ -3,6 +3,7 @@
 A library for sending ad beacons on Android devices. Library is currently integrated with Google PAL & OM SDK. The project also includes a demo app that hosts an ExoPlayer that allows users to test their custom DAI assets with Google PAL & OM SDK signaling.
 
 ## Features
+
 - [x] Harmonic VOS metadata parsing
 - [x] Google Programmatic Access Libraries (PAL)
 - [x] Fire ad beacons via Open Measurement SDK (OMSDK)
@@ -12,43 +13,53 @@ A library for sending ad beacons on Android devices. Library is currently integr
 - [x] Flexible integration: supports both full tracking (with views) and beacon-only tracking (headless)
 
 ## Requirements
+
 Android 8.0 (API 26) or above
-- Min SDK 26 
-- Target SDK 33 
+
+- Min SDK 26
+- Target SDK 33
 - Compile SDK 34
 
 ## Usage
+
 1. Include this library in your project
 
    Groovy:
+
    ```groovy
    dependencies {
        implementation 'io.github.harmonicinc-com:client-side-ad-tracking-android:0.1.14' 
    }
    ```
+
    Kotlin:
+
    ```kotlin
    dependencies {
        implementation("io.github.harmonicinc-com:client-side-ad-tracking-android:0.1.14") 
    }
    ```
+
    Change version to the latest available. You may find the latest version [here](https://central.sonatype.com/artifact/io.github.harmonicinc-com/client-side-ad-tracking-android/).
 
 2. Include the OMSDK library as dependency
    > [!NOTE]  
-   > As of now (Oct 2023), Google still has no support on bundling local modules into a single AAR (Fat AAR). That blocks us from shipping the OMSDK AAR together with the library. 
+   > As of now (Oct 2023), Google still has no support on bundling local modules into a single AAR (Fat AAR). That blocks us from shipping the OMSDK AAR together with the library.
 
    - Create a directory on your app root (we use `libs` as an example)
    - Download the AAR that we've included in this repo: [omsdk-android-1.4.5-release.aar](lib%2Flib%2Fomsdk-android-1.4.5-release.aar)
    - Place it under `libs`
    - Add the following lines in your dependency block
+
       ```groovy
       dependencies {
           implementation fileTree(include: ['*.aar'], dir: 'libs')
           ...
       }
       ```
+
       Kotlin:
+
       ```kotlin
       dependencies {
           implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
@@ -56,20 +67,26 @@ Android 8.0 (API 26) or above
           implementation(fileTree("libs"))
           ...
       }
-      ``` 
+      ```
+
 3. Declare `AD_ID` permission
    - To enable Google WTA, add the following line to your `AndroidManifest.xml`
+
      ```xml
      <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
      ```
+
 4. Initialize parameters & interfaces
    - Create an instance of `AdTrackingManager` in activity (preferably, could be somewhere else).
+
      ```kotlin
      class PlayerActivity: FragmentActivity() {
          private val adTrackingManager = AdTrackingManager(this)
      }
      ```
+
    - Create an instance of `AdTrackingManagerParams`. Fill in all the required parameters:
+
      ```kotlin
      val adTrackingParams = AdTrackingManagerParams(
          descriptionUrl, // String: Description URL of video being played
@@ -92,7 +109,9 @@ Android 8.0 (API 26) or above
          cacheRetentionTimeMs // Long: How long should beacon metadata be cached? (defaults to 2 hours: 2 * 60 * 60 * 1000L)
      )
      ```
+
    - Create a class that implements `PlayerAdapter`. Override all mandatory methods and return appropriate values from your player. The demo project includes an example [ExoPlayerAdapter.kt](demo%2Fsrc%2Fmain%2Fjava%2Fcom%2Fharmonicinc%2Fcsabdemo%2Fplayer%2FExoPlayerAdapter.kt) for your reference.
+
      ```kotlin
      class YourPlayerAdapter(private val player: YourPlayer): PlayerAdapter {
          override fun getCurrentPositionMs(): Long {
@@ -115,7 +134,9 @@ Android 8.0 (API 26) or above
          }
      }
      ```
+
    - Fire the events in `PlayerAdapter` when specific conditions are met. You might need to listen events emitted from your player.
+
      ```kotlin
      val playerAdapter = YourPlayerAdapter(player)
      // Call when player starts to buffer
@@ -157,33 +178,43 @@ Android 8.0 (API 26) or above
      // Call when user changes the audio volume (no need to check if ad is playing. The lib will handle it)
      playerAdapter.onVolumeChanged()
      ```
+
 5. Using the library
    - Before loading the asset, call `prepareBeforeLoad` to preload the library. Note that it should be called within a coroutine scope.
-     ```kotlin 
+
+     ```kotlin
      val manifestUrl = "https://www.example.com" // put your URL here
      CoroutineScope(Dispatchers.Main).launch {
          adTrackingManager.prepareBeforeLoad(manifestUrl, adTrackingParams)
      }
      ```
+
    - After preloading, check if the asset supports Harmonic SSAI using `isSSAISupported`. Make sure the asset is supported by the library before continuing.
+
      ```kotlin
      val isSSAISupported = adTrackingManager.isSSAISupported()
      ```
+
    - Check if a new URL is obtained by the library. If that is the case, use that URL for your playback.
+
      ```kotlin
      val updatedManifestUrl = manifestUrl
      if (adTrackingManager.getObtainedManifestUrl() != null) {
         updatedManifestUrl = adTrackingManager.getObtainedManifestUrl()
      }
      ```
+
    - To obtain the generated nonce, call `appendNonceToUrl`
+
      ```kotlin
      val manifestUrls = listOf("https://www.example.com")
      val urlsWithNonce = adTrackingManager.appendNonceToUrl(manifestUrls)
      ```
+
    - Finally, call `onPlay` to start the library. There are two usage scenarios:
 
      **Full Tracking (with views)** - Enables OMSDK verification, overlays, and ad choices:
+
      ```kotlin
      // Must be called from the main thread when providing playerView
      adTrackingManager.onPlay(
@@ -195,6 +226,7 @@ Android 8.0 (API 26) or above
      ```
 
      **Beacon-Only Tracking (without views)** - Only PMM beacon tracking, useful for headless scenarios:
+
      ```kotlin
      adTrackingManager.onPlay(
         context, // Android context (Activity, Service, or Application context)
@@ -206,20 +238,22 @@ Android 8.0 (API 26) or above
      > [!IMPORTANT]  
      > **Threading Requirements:**
      > - When `playerView` is provided: **Must be called from the main thread**
-     > 
+     >
      > The library will throw an `IllegalStateException` if called from a background thread when `playerView` is provided.
 
      > [!NOTE]  
      > When `playerView` is not provided, only PMM beacon tracking will be active. OMSDK verification, tracking overlays, and ad choices will be disabled since they require view access for viewability measurement.
 
-6. Stop the library after playback 
+6. Stop the library after playback
    - Remember to clean the library after unloading the asset. Otherwise it will keep querying ads metadata and the cached metadata will not be removed.
+
      ```kotlin
      adTrackingManager.cleanupAfterStop()
      ```
 
 7. **Error Handling (Optional)**
    - You can optionally set an error listener to receive callbacks when errors occur in the ad tracking system.
+
      ```kotlin
      adTrackingManager.setErrorListener(object : AdTrackingErrorListener {
          override fun onError(error: AdTrackingError) {
@@ -240,6 +274,7 @@ Android 8.0 (API 26) or above
          }
      })
      ```
+
    - **Available Error Types:**
      - `SessionInitError`: Occurs during session initialization when URLs/session ID cannot be constructed properly. **(May be non-recoverable)**
        - If the fallback implemented by the library also fails, then `error.errorIsRecoverable` will be `false`. Ad tracking will not be enabled.
@@ -247,11 +282,15 @@ Android 8.0 (API 26) or above
      - `MetadataError`: Occurs when ad metadata cannot be fetched or parsed. The library will fetch the metadata again after a set delay.
 
 ## Development
+
 ### Monitor traffic with Charles Proxy
+
 Follow below steps so traffic (especially HTTPS) can be proxied & decrypted by Charles
+
 1. Open Charles Proxy, go to Help > SSL Proxying > Save Charles Root Certificate
 2. Save as `<your_android_app_project_root>/src/main/res/raw/charles_ssl_cert.pem`
 3. Create an XML under `<root>/src/main/res/xml/network_security_config.xml` with the following content:
+
    ```xml
     <network-security-config>
        <debug-overrides>
@@ -263,7 +302,9 @@ Follow below steps so traffic (especially HTTPS) can be proxied & decrypted by C
        </debug-overrides>
    </network-security-config>
    ```
+
 4. Reference to the new config in your app's manifest (i.e. `AndroidManifest.xml`)
+
    ```xml
    <?xml version="1.0" encoding="utf-8"?>
    <manifest>
@@ -271,15 +312,19 @@ Follow below steps so traffic (especially HTTPS) can be proxied & decrypted by C
        </application>
    </manifest>
    ```
+
 5. Configure the proxy settings on your Android device/emulator. Please refer to your device documentation for instructions.
 6. You should now be able to capture SSL traffic in Charles. Look for segments/manifest/metadata requests and see if you can view the response body.
 
 ### HTTP requests
+>
 > [!NOTE]  
 > Allowing insecure traffic is not recommended in production environment. Remember to undo the changes before publishing.
 
 Android apps by default blocks plain text traffic. If you would like to play insecure streams (HTTP):
+
 - In your app's manifest (i.e. `AndroidManifest.xml`), add an extra flag
+
   ```xml
   <?xml version="1.0" encoding="utf-8"?>
   <manifest>
@@ -287,14 +332,19 @@ Android apps by default blocks plain text traffic. If you would like to play ins
       </application>
   </manifest>
   ```
-#### If your Android is running P (aka Android 9) or higher, do also:
+
+#### If your Android is running P (aka Android 9) or higher, do also
+
 - Create an XML under `<root>/src/main/res/xml/network_security_config.xml` with the following content:
+
   ```xml
   <network-security-config>
       <base-config cleartextTrafficPermitted="true" />
   </network-security-config>
   ```
+
 - Reference to the new config in your app's manifest (i.e. `AndroidManifest.xml`)
+
   ```xml
   <?xml version="1.0" encoding="utf-8"?>
   <manifest>
@@ -304,12 +354,17 @@ Android apps by default blocks plain text traffic. If you would like to play ins
   ```
 
 ## Appendix
+
 ### Tracking overlay
+
 To show/hide the tracking overlay, call `showTrackingOverlay`
+
 ```kotlin
 adTrackingManager.showTrackingOverlay(state)
 ```
+
 ### API frameworks
+>
 > Reference: [IAB AdCOM v1.0 FINAL](https://github.com/InteractiveAdvertisingBureau/AdCOM/blob/main/AdCOM%20v1.0%20FINAL.md#list--api-frameworks-)
 
 The following table is a list of API frameworks either supported by a placement or required by an ad.
@@ -368,11 +423,13 @@ The following table is a list of API frameworks either supported by a placement 
 > Applicable when `initRequest` in `AdTrackingManagerParams` is `true` (default is true).
 
 1. The library sends a request to the manifest endpoint with the query param "initSession=true". For e.g., a GET request is sent to:
+
     ```
     https://my-host/variant/v1/dash/manifest.mpd?initSession=true
     ```
 
 2. The ad insertion service (PMM) responds with the URLs. For e.g.,
+
     ```
     {
         "manifestUrl": "./manifest.mpd?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed&vosad_inst_id=pmm-0",
@@ -381,6 +438,7 @@ The following table is a list of API frameworks either supported by a placement 
     ```
 
 3. The library constructs the URLs by combining the host in the original URL and the relative URLs obtained. For e.g.,
+
     ```
     Manifest URL: https://my-host/variant/v1/dash/manifest.mpd?sessid=a700d638-a4e8-49cd-b288-6809bd35a3ed&vosad_inst_id=pmm-0
 

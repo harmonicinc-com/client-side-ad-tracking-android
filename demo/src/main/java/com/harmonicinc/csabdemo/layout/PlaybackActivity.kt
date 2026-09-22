@@ -111,6 +111,14 @@ import kotlinx.coroutines.launch
                         playerFragment.playerView.overlayFrameLayout,
                         playerFragment.playerView
                     )
+                    showSnackbar(
+                        if (adTrackingManager.isViewTrackingEnabled()) {
+                            "Full tracking started: PMM, OM SDK, and WTA are enabled"
+                        } else {
+                            "Beacon-only tracking started"
+                        },
+                        rootLayout
+                    )
                 } else {
                     showSnackbar("Asset does not support SSAI", rootLayout)
                 }
